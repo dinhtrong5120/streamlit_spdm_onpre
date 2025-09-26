@@ -1,0 +1,28 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="EmptyDirectory" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="InconsistentLineSeparators" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="IncorrectFormatting" enabled="true" level="WEAK WARNING" enabled_by_default="true" />
+    <inspection_tool class="LongLine" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="ProblematicWhitespace" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="9">
+            <item index="0" class="java.lang.String" itemvalue="re" />
+            <item index="1" class="java.lang.String" itemvalue="decouple" />
+            <item index="2" class="java.lang.String" itemvalue="streamlit_extras.grid" />
+            <item index="3" class="java.lang.String" itemvalue="sqlalchemy" />
+            <item index="4" class="java.lang.String" itemvalue="openpyxl" />
+            <item index="5" class="java.lang.String" itemvalue="PyQt6" />
+            <item index="6" class="java.lang.String" itemvalue="asttokens" />
+            <item index="7" class="java.lang.String" itemvalue="executing" />
+            <item index="8" class="java.lang.String" itemvalue="psutil" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="TodoComment" enabled="true" level="WARNING" enabled_by_default="true" />
+  </profile>
+</component>

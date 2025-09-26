@@ -1,0 +1,58 @@
+\copy AllocationSub from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\AllocationSub.csv' delimiter ',' csv;
+\copy Allocation from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Allocation.csv' delimiter ',' csv;
+\copy CAE_Model from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\CAE Model.csv' delimiter ',' csv;
+\copy CustomerRequirements from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\CustomerRequirements.csv' delimiter ',' csv;
+\copy Driver from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Driver.csv' delimiter ',' csv;
+\copy Environment from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Enviorment.csv' delimiter ',' csv;
+\copy FunctionSub from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\FunctionSub.csv' delimiter ',' csv;
+\copy Function from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Function.csv' delimiter ',' csv;
+\copy L from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\L.csv' delimiter ',' csv;
+\copy LogicSub from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\LogicSub.csv' delimiter ',' csv;
+\copy Logic from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Logic.csv' delimiter ',' csv;
+\copy LSub from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\LSub.csv' delimiter ',' csv;
+\copy Master_RFL from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Master-RFL.csv' delimiter ',' csv;
+\copy PasteError from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\PasteError.csv' delimiter ',' csv;
+\copy PerformanceWP from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\PerformanceWP.csv' delimiter ',' csv;
+\copy Project from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Project.csv' delimiter ',' csv;
+\copy R from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\R.csv' delimiter ',' csv;
+\copy Regulation from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Regulation.csv' delimiter ',' csv;
+\copy RequirementsSub from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\RequirementsSub.csv' delimiter ',' csv;
+\copy Requirements from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Requirements.csv' delimiter ',' csv;
+\copy RFL from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\RFL.csv' delimiter ',' csv;
+\copy RFLv2 from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\RFLv2.csv' delimiter ',' csv;
+\copy RFLv2_till_SoundVibration from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\RFLv2 till 音振.csv' delimiter ',' csv;
+\copy RFLv2_till_DrivingSystem from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\RFLv2 till運転性sys.csv' delimiter ',' csv;
+\copy RFLv2_till_Power from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\RFLv2 till動力.csv' delimiter ',' csv;
+\copy RFLv2_till_FourWD from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\RFLv2 の till 4WD.csv' delimiter ',' csv;
+\copy RSub from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\RSub.csv' delimiter ',' csv;
+\copy Scene from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Scene.csv' delimiter ',' csv;
+\copy Specification from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Specification.csv' delimiter ',' csv;
+\copy UnitCharacteristic from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Unit特性.csv' delimiter ',' csv;
+\copy Vehicle from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Vehicle.csv' delimiter ',' csv;
+\copy Architecture from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\アーキテクチャ.csv' delimiter ',' csv;
+\copy SceneSub from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\シーンSub.csv' delimiter ',' csv;
+\copy SceneList from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\シーンリスト.csv' delimiter ',' csv;
+\copy Status from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\ステータス.csv' delimiter ',' csv;
+\copy Segment from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\セグメント.csv' delimiter ',' csv;
+\copy Phase from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\フェーズ.csv' delimiter ',' csv;
+\copy MetaRFL from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\メタRFL.csv' delimiter ',' csv;
+\copy MetaRFLv2 from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\メタRFLv2.csv' delimiter ',' csv;
+\copy Meta from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\メタ.csv' delimiter ',' csv;
+\copy Lot from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\ロット.csv' delimiter ',' csv;
+\copy Hierarchy from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\階層.csv' delimiter ',' csv;
+\copy Destination from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\仕向け.csv' delimiter ',' csv;
+\copy CarModel from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\車種.csv' delimiter ',' csv;
+
+\copy tanto from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\tanto.csv' delimiter ',' csv;
+\copy tanto FROM 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\tanto(sjis).csv' delimiter ',' csv;
+
+
+\copy Approval_status_table from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\Approval_status_table.csv' delimiter ',' csv;
+\copy user_table from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\user_table.csv' delimiter ',' csv;
+
+\copy update_record from'C:\Python Project\Streamlit\SElist_[Kei]_JPN_2WD_output.csv' delimiter ',' csv;
+
+
+\copy detail_data from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\detail_data.csv' delimiter ',' csv;
+\copy dialog_list from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\dialog_list.csv' delimiter ',' csv;
+\copy se_project_record from 'C:\Python Project\Streamlit\spdm_app\postgreSQL_DB\CSV\se_project_record.csv' delimiter ',' csv;

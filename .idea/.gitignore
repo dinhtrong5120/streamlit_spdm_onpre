@@ -1,0 +1,69 @@
+# Python files
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.pdb
+*.egg
+*.egg-info/
+*.eggs
+
+# Django related
+*.log
+*.pot
+*.py[cod]
+backend/*.sqlite3
+
+# Virtual environments
+venv/
+.venv/
+.env/
+*.env
+env/
+myenv/
+.Python
+
+# VS Code and IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Git and directory files
+*.orig
+*.bak
+
+# Static and media files
+backend/staticfiles/
+backend/media/
+
+# Migration files (optional, but useful if you regenerate migrations)
+**/migrations/*.pyc
+**/migrations/*.py, except __init__.py
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+.nox/
+
+# pyenv
+.python-version
+
+# mypy
+.mypy_cache/
+.dmypy.json
+.dmypy-hash
+
+#project files
+logs/
+configs.ini
+test/
+db.sqlite3
+media/download_temp

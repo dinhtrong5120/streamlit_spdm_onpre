@@ -1,0 +1,169 @@
+{
+".ag-header-group-text":{
+    "text-overflow": "clip;",
+    "overflow": "visible;",
+    "white-space": "normal;",
+    "font-size": "12px;"
+},
+".ag-header-group-cell.group_title_green": {
+    "background-color": "#3677b2;",
+    "color": "#D2E6DE;" ,
+    "font-size": "12px;"
+},
+".ag-header-cell.title_green": {
+    "background-color": "#3677b2;",
+    "color": "#D2E6DE;" ,
+    "font-size": "12px;"
+},
+".ag-header-group-cell.group_darkgreen":{
+    "background-color": "#4A84B9;",
+    "color": "#D2E6DE;" ,
+    "font-size": "12px;"
+},
+".ag-header-cell.darkgreen": {
+    "background-color": "#4A84B9;",
+    "color": "#D2E6DE;" ,
+    "font-size": "12px;"
+},
+".ag-header-group-cell.group_green":{
+    "background-color": "#3677b2;",
+    "color": "#D2E6DE;" ,
+    "font-size": "12px;"
+},
+".ag-header-cell.green": {
+    "background-color": "#3677b2;",
+    "color": "#D2E6DE;" ,
+    "font-size": "12px;"
+},
+".ag-header-cell.title_cyan": {
+    "background-color": "#CCFFFF;",
+    "color": "#444444;" ,
+    "font-size": "12px;"
+},
+".ag-header-group-cell.group_title_cyan": {
+    "background-color": "#CCFFFF;",
+    "color": "#444444;" ,
+    "font-size": "12px;"
+},
+".ag-header-cell.title_yellow": {
+    "background-color": "#FFFFCC;",
+    "color": "#444444;" ,
+    "font-size": "12px;"
+},
+".ag-header-group-cell.group_title_yellow": {
+    "background-color": "#FFFFCC;",
+    "color": "#444444;" ,
+    "font-size": "12px;"
+},
+".ag-header-cell.title_white": {
+    "background-color": "#FFFFFF;",
+    "color": "#444444;" ,
+    "font-size": "12px;"
+},
+".ag-header-group-cell.group_title_white": {
+    "background-color": "#FFFFFF;",
+    "color": "#444444;" ,
+    "font-size": "12px;"
+},
+".ag-header-cell.req":{
+    "background-color": "#DDEBF7;",
+    "color": "#000000;" ,
+    "font-size": "12px;"
+},
+".ag-header-group-cell.group_req":{
+    "background-color": "#DDEBF7;",
+    "color": "#000000;" ,
+    "font-size": "12px;"
+},
+".ag-header-group-cell.group_func":{
+    "background-color": "#FFFF99;",
+    "color": "#000000;" ,
+    "font-size": "12px;"
+},".ag-header-cell.func":{
+    "background-color": "#FFFF99",
+    "color": "#000000;" ,
+    "font-size": "12px;"
+},
+".ag-header-group-cell.group_logic":{
+    "background-color": "#FFCCFF;",
+    "color": "#000000;" ,
+    "font-size": "12px;"
+},".ag-header-cell.logic":{
+    "background-color": "#FFCCFF",
+    "color": "#000000;" ,
+    "font-size": "12px;"
+},
+".ag-header-cell.logic_to_summary":{
+    "background-color": "#FFCCFF;",
+    "color": "#000000;" ,
+    "font-size": "30px;"
+},
+".ag-header-cell.se_to_summary":{
+    "background-color": "#FFFFFF;",
+    "color": "#000000;" ,
+    "font-size": "30px;"
+},
+".ag-header-cell.requirements_to_summary":{
+    "background-color": "#DDEBF7;",
+    "color": "#000000;" ,
+    "font-size": "30px;"
+},
+".ag-header-group-cell.car":{
+    "background-color": "#002060",
+    "color": "#FFFFFF;" ,
+    "font-size": "12px;"
+},".ag-header-group-cell.system":{
+    "background-color": "#ED7D31",
+    "color": "#FFFFFF;" ,
+    "font-size": "12px;"
+},".ag-header-group-cell.unit":{
+    "background-color": "#00B0F0",
+    "color": "#FFFFFF;" ,
+    "font-size": "12px;"
+},
+".ag-header-cell.rsummary_title_yellow": {
+    "background-color": "#FFFFCC",
+    "color": "#444444",
+    "font-size": "25px"
+},
+".ag-header-cell-label, .ag-header-group-cell-label.rsummary_title_yellow": {
+    "justify-content": "center !important"
+},
+".ag-header-cell.dashboard_car":{
+    "background-color": "#156082;",
+    "color": "#FFFFFF;" ,
+    "font-size": "15px;"
+},
+".ag-header-group-cell.group_dashboard_car":{
+    "background-color": "#156082;",
+    "color": "#FFFFFF;"
+},
+".ag-header-group-cell.group_dashboard_car .ag-header-group-text":{ 
+    "font-size": "15px !important;"
+},
+".ag-header-cell.dashboard_system":{
+    "background-color": "#FFC000;",
+    "color": "#000000;" ,
+    "font-size": "15px;"
+},
+".ag-header-group-cell.group_dashboard_system":{
+    "background-color": "#FFC000;",
+    "color": "#000000;"
+},
+".ag-header-group-cell.group_dashboard_system .ag-header-group-text":{ 
+    "font-size": "15px !important;"
+},
+".ag-header-cell.dashboard_performance":{
+    "background-color": "#C1E5F5;",
+    "color": "#000000;" ,
+    "font-size": "15px;"
+},
+".ag-header-group-cell.group_dashboard_performance":{
+    "background-color": "#C1E5F5;",
+    "color": "#000000;"
+},
+".ag-header-group-cell.group_dashboard_performance .ag-header-group-text":{ 
+    "font-size": "15px !important;"
+}
+
+}

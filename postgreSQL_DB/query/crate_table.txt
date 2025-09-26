@@ -1,0 +1,494 @@
+create table AllocationSub(
+ ID Integer,
+ Allocation Text,
+ forLogic Text
+);
+
+create table Allocation(
+ ID Integer,
+ Allocation Text
+);
+
+create table CAE_Model(
+ ID Integer,
+ CAE_Model Text,
+ CarModelID Text,
+ R_ID Text,
+ DestinationID Text,
+ ArchitectureID Text
+);
+
+create table CustomerRequirements(
+ ID Integer,
+ VehiclePerformance Text
+);
+
+create table Driver(
+ ID Integer,
+ DestinationID Text,
+ UseCaseID Text,
+ APO Text
+);
+
+create table Environment(
+ ID Integer,
+ DestinationID Text,
+ UseCaseID Text,
+ Gradient Integer,
+ Altitude Integer,
+ AmbientTemperature Integer
+);
+
+create table FunctionSub(
+ ID Integer,
+ Function Text,
+ ForL Text
+);
+
+create table Function(
+ ID Integer,
+ Function Text
+);
+
+create table L(
+ ID Integer,
+ LogicID Integer,
+ LSceneID Integer
+);
+
+create table LogicSub(
+ ID Integer,
+ LRequirement Text,
+ AllocationID Integer,
+ forL Integer
+);
+
+create table Logic(
+ ID Integer,
+ LRequirement Text,
+ AllocationID Integer
+);
+
+create table LSub(
+ ID Integer,
+ LogicID Integer,
+ LSceneID Integer,
+ foryou Text
+);
+
+create table Master_RFL(
+ ID Integer,
+ RID Integer,
+ FunctionID Integer,
+ LID Integer,
+ Condition_ArchitectureID_in Text,
+ Condition_DestinationID_in Text,
+ Condition_2WD_4WD_in Text,
+ Condition_SegmentID_in Text,
+ Condition_CarModelID_in Text,
+ Note Text,
+ RequirementSourceRFLID Text,
+ SameLevelRequirementSourceRFLID Text,
+ VerificationCADICS Text
+);
+
+create table Project(
+ ID Integer,
+ ProjectName Text,
+ SegmentID Integer,
+ CarModelID Integer
+);
+
+create table R(
+ ID Integer,
+ RequirementsID Integer,
+ RSceneID Integer
+);
+
+create table Regulation(
+ ID Integer,
+ Regulation Text,
+ DestinationID Text,
+ R_ID Text,
+ CarModelID Text,
+ ArchitectureID Text
+);
+
+create table RequirementsSub(
+ ID Integer,
+ RRequirement Text,
+ forR Text
+);
+
+create table Requirements(
+ ID Integer,
+ RRequirement Text
+);
+
+create table RFL(
+ ID Integer,
+ PrjID Integer,
+ DestinationID Text,
+ TwoWD_FourWD Text,
+ WPID Integer,
+ HierarchyID Integer,
+ RequirementsID Integer,
+ RequirementValue Text,
+ RSceneID Integer,
+ FunctionID Integer,
+ FunctionGoal Text,
+ LogicID Integer,
+ RequirementValue1 Text,
+ LSceneID Integer,
+ Note Text,
+ RequirementSourceRFLID Text,
+ SameLevelRequirementSourceRFLID Text,
+ VerificationCADICS Text
+);
+
+create table RFLv2(
+ ID Integer,
+ PrjID Integer,
+ DestinationID Text,
+ TwoWD_FourWD Text,
+ WPID Integer,
+ HierarchyID Integer,
+ RequirementsID Integer,
+ RequirementValue Text,
+ RSceneID Integer,
+ FunctionID Integer,
+ FunctionGoal Text,
+ LogicID Integer,
+ RequirementValue1 Text,
+ LSceneID Integer,
+ Note Text,
+ RequirementSourceRFLID Text,
+ SameLevelRequirementSourceRFLID Text,
+ VerificationCADICS Text,
+ Status Integer,
+ Date_Department_ResponsiblePerson Text,
+ Lock Integer,
+ Hidden Integer
+);
+
+create table RFLv2_till_SoundVibration(
+ ID Integer,
+ PrjID Integer,
+ DestinationID Text,
+ TwoWD_FourWD Text,
+ WPID Integer,
+ HierarchyID Integer,
+ RequirementsID Integer,
+ RequirementValue Text,
+ RSceneID Integer,
+ FunctionID Integer,
+ FunctionGoal Text,
+ LogicID Integer,
+ RequirementValue1 Text,
+ LSceneID Integer,
+ Note Text,
+ RequirementSourceRFLID Text,
+ SameLevelRequirementSourceRFLID Text,
+ VerificationCADICS Text
+);
+
+create table RFLv2_till_DrivingSystem(
+ ID Integer,
+ PrjID Integer,
+ DestinationID Text,
+ TwoWD_FourWD Text,
+ WPID Integer,
+ HierarchyID Integer,
+ RequirementsID Integer,
+ RequirementValue Text,
+ RSceneID Integer,
+ FunctionID Integer,
+ FunctionGoal Text,
+ LogicID Integer,
+ RequirementValue1 Text,
+ LSceneID Integer,
+ Note Text,
+ RequirementSourceRFLID Text,
+ SameLevelRequirementSourceRFLID Text,
+ VerificationCADICS Text
+);
+
+create table RFLv2_till_Power(
+ ID Integer,
+ PrjID Integer,
+ DestinationID Text,
+ TwoWD_FourWD Text,
+ WPID Integer,
+ HierarchyID Integer,
+ RequirementsID Integer,
+ RequirementValue Text,
+ RSceneID Integer,
+ FunctionID Integer,
+ FunctionGoal Text,
+ LogicID Integer,
+ RequirementValue1 Text,
+ LSceneID Integer,
+ Note Text,
+ RequirementSourceRFLID Text,
+ SameLevelRequirementSourceRFLID Text,
+ VerificationCADICS Text
+);
+
+create table RFLv2_till_FourWD(
+ ID Integer,
+ PrjID Integer,
+ DestinationID Text,
+ TwoWD_FourWD Text,
+ WPID Integer,
+ HierarchyID Integer,
+ RequirementsID Integer,
+ RequirementValue Text,
+ RSceneID Integer,
+ FunctionID Integer,
+ FunctionGoal Text,
+ LogicID Integer,
+ RequirementValue1 Text,
+ LSceneID Integer,
+ Note Text,
+ RequirementSourceRFLID Text,
+ SameLevelRequirementSourceRFLID Text,
+ VerificationCADICS Text
+);
+
+create table RSub(
+ ID Integer,
+ RequirementsID Integer,
+ RSceneID Integer,
+ foryou Text
+);
+
+create table Scene(
+ ID Integer,
+ DrivingPattern Text,
+ DestinationID Text,
+ UseCaseID Text,
+ DrivingTime Integer,
+ DrivingDistance double precision
+);
+
+create table Specification(
+ ID Integer,
+ Specification Text,
+ SegmentID Text,
+ CarModelID Text,
+ R_ID Text,
+ DestinationID Text
+);
+
+create table UnitCharacteristic(
+ ID Integer,
+ UnitCharacteristic Text,
+ ArchitectureID Text,
+ CarModelID Text,
+ R_ID Text,
+ DestinationID Text
+);
+
+create table Vehicle(
+ ID Integer,
+ DestinationID Text,
+ UseCaseID Text,
+ TestWeight Text,
+ Towing Text,
+ AirConditioningCondition Text,
+ PreTestCondition Text,
+ InitialSOC Integer,
+ InitialBatteryTemperature Integer,
+ BatterySOR Text,
+ BatterySOH Text
+);
+
+create table Architecture(
+ ID Integer,
+ ArchitectureName Text
+);
+
+create table SceneSub(
+ ID Integer,
+ Scene Text,
+ foryou Text
+);
+
+create table SceneList(
+ ID Integer,
+ Scene Text
+);
+
+create table Status(
+ ID Integer,
+ Status Text
+);
+
+create table Segment(
+ ID Integer,
+ Segment Text
+);
+
+create table Phase(
+ ID Integer,
+ PhaseName Text
+);
+
+create table MetaRFL(
+ ID Integer,
+ MetaID Integer,
+ WPID Integer,
+ HierarchyID Integer,
+ RID Integer,
+ RRequirementValue Text,
+ FunctionID Integer,
+ FunctionGoal Text,
+ LID Integer,
+ LRequirementValue Text,
+ Note Text,
+ RequirementSourceRFLID Text,
+ SameLevelRequirementSourceRFLID Text,
+ VerificationCADICS Text,
+ Status Integer,
+ Date_Department_ResponsiblePerson Text,
+ Hidden Integer,
+ Lock Integer
+);
+
+create table MetaRFLv2(
+ ID Integer,
+ MetaID Integer,
+ WPID Integer,
+ HierarchyID Integer,
+ CustomerRID Integer,
+ CustomerRRequirementValue Text,
+ RID Integer,
+ RRequirementValue Text,
+ FunctionID Integer,
+ FunctionGoal Text,
+ LID Integer,
+ LRequirementValue Text,
+ Note Text,
+ RequirementSourceRFLID Text,
+ SameLevelRequirementSourceRFLID Text,
+ VerificationCADICS Text,
+ Status Integer,
+ Date_Department_ResponsiblePerson Text,
+ Hidden Integer,
+ Lock Integer
+);
+
+create table Meta(
+ ID Integer,
+ PrjID Integer,
+ ArchitectureID Integer,
+ DestinationID Integer,
+ TwoWD_FourWD Text,
+ LotID Integer,
+ PhaseID Integer
+);
+
+create table Lot(
+ ID Integer,
+ LotName Text
+);
+
+create table Hierarchy(
+ ID Integer,
+ Hierarchy Text
+);
+
+create table Destination(
+ ID Integer,
+ Destination Text
+);
+
+create table CarModel(
+ ID Integer,
+ CarModel Text
+);
+
+create table PerformanceWP(
+ ID Integer,
+ WP Text
+);
+
+create table PasteError(
+ F1 double precision,
+ F2 double precision,
+ F3 double precision
+);
+
+create table ì\ÇËïtÇØÉGÉâÅ[(
+ F1 double precision,
+ F2 double precision,
+ F3 double precision
+);
+
+CREATE TABLE detail_data(
+ z_paravalueid VARCHAR(50),
+ employee_number VARCHAR(50),
+ update_day TIMESTAMP,
+ approval_status INTEGER,
+ user_memo TEXT
+);
+
+CREATE TABLE Approval_status_table(
+ state_key INTEGER,
+ state_name VARCHAR(50)
+);
+
+CREATE TABLE user_table(
+ employee_number VARCHAR(50),
+ section_code VARCHAR(50),
+ Contac_person_First_Name VARCHAR(50),
+ Contac_person_Last_Name VARCHAR(50)
+);
+
+CREATE TABLE dialog_list(
+ z_destination VARCHAR(50),
+ z_drive_system VARCHAR(50),
+ z_model_code VARCHAR(50),
+ z_number VARCHAR(50),
+ z_vehicle_type VARCHAR(50)
+);
+
+
+CREATE TABLE se_project_record(
+ generation Text,
+ id Text,
+ is_current Text,
+ is_released Text,
+ keyed_name Text,
+ major_rev Text,
+ modified_on Text,
+ new_version Text,
+ not_lockable Text,
+ state Text,
+ z_class_name_get_str Text,
+ z_class_name_pass_str Text,
+ z_design_value Text,
+ z_destination Text,
+ z_drive_system Text,
+ z_evaluation_value Text,
+ z_lot Text,
+ z_note Text,
+ z_parametertype Text,
+ z_prj_number Text,
+ z_request_lower Text,
+ z_request_median Text,
+ z_request_upper Text,
+ z_unit Text,
+ z_wp_name_get_str Text,
+ z_wp_name_pass_str Text,
+ z_paravalueid Text,
+ z_parent_paraitem Text,
+ z_child_paraitem Text,
+ z_scene Text,
+ itemtype Text,
+ z_name Text,
+ z_design_file_check Text
+);
+
+
+

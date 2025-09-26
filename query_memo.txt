@@ -1,0 +1,144 @@
+下記作成文字列をpythonの繰り返し構文なりで作成したい。
+作成文字列は同じような部分があり、差異分の要素をデータフレームで示しました。
+要素の増減はあり、増減の対応をしなければなりません
+これを繰り返しなりで生成したい。美しく最適化されたコードをpythonで作成した下さい。
+
+-- SELECT z_class_name_get_str, z_wp_name_get_str
+-- FROM se_project_record
+-- WHERE z_class_name_get_str IS NOT NULL AND z_class_name_get_str <> ''
+-- ORDER BY z_class_name_get_str
+--          ,cast(REPLACE(SUBSTRING(z_wp_name_get_str, POSITION('#' IN z_wp_name_get_str) + 1),'-', '') AS INTEGER)
+
+==========データフレーム=====================
+data = {
+    'Column1': ['SElist_[Kei]_JPN_2WD', 'SElist_[Kei]_JPN_2WD', 'SElist_[Kei]_JPN_2WD'],
+    'Column2': ['PT構想審査', 'PT構想審査', 'PT構想審査'],
+    'Column3': ['MBSE検討1回目', 'MBSE検討1回目', 'MBSE検討1回目'],
+    'Column4': ['Variation#1', 'Variation#2', 'Variation#3']
+}
+
+==========作成文字列=====================
+select *
+from
+    (select
+        a.z_paravalueid                                                                   AS "SElist_[Kei]_JPN_2WD;z_paravalueid;Variation#1",
+        a.z_parent_paraitem                                                               AS "SElist_[Kei]_JPN_2WD;z_parent_paraitem;Variation#1",
+        a.z_child_paraitem                                                                AS "SElist_[Kei]_JPN_2WD;z_child_paraitem;Variation#1",
+        a.z_unit                                                                          AS "SElist_[Kei]_JPN_2WD;z_unit;Variation#1",
+        a.z_wp_name_get_str                                                               AS "SElist_[Kei]_JPN_2WD;z_wp_name_get_str;Variation#1",
+        CASE
+            WHEN a.z_unit = 'MAP' THEN a.z_design_file_check 
+            ELSE a.z_request_median
+        END                                                                               AS "SElist_[Kei]_JPN_2WD;z_request_median;Variation#1",
+        CONCAT(c.section_code, ' ', 
+            c.contac_person_first_name, ' ',
+            c.contac_person_last_name)                                                    AS "SElist_[Kei]_JPN_2WD;contac_user;Variation#1",
+        CASE 
+            WHEN b.update_day IS NOT NULL THEN LEFT(CAST(b.update_day AS VARCHAR), 10) 
+            ELSE NULL 
+        END                                                                               AS "SElist_[Kei]_JPN_2WD;update_day;Variation#1",
+        d.state_name                                                                      AS "SElist_[Kei]_JPN_2WD;state_name;Variation#1",
+        b.user_memo                                                                       AS "SElist_[Kei]_JPN_2WD;user_memo;Variation#1"
+    from
+        se_project_record as a
+    inner join
+        detail_data as b
+        on 
+            a.z_paravalueid = b.z_paravalueid
+    inner join
+        user_table as c
+        on
+            b.employee_number = c.employee_number
+    inner join
+        approval_status_table as d
+        on
+            b.approval_status = d.state_key
+    where a.z_wp_name_get_str = 'Variation#1'
+        and a.z_prj_number = 'SElist_[Kei]_JPN_2WD'
+        and a.z_name = 'PT構想審査'
+        and a.z_class_name_get_str = 'MBSE検討1回目'
+    ) as a
+inner join
+    (select
+        a.z_paravalueid                                                                   AS "SElist_[Kei]_JPN_2WD;z_paravalueid;Variation#2",
+        a.z_parent_paraitem                                                               AS "SElist_[Kei]_JPN_2WD;z_parent_paraitem;Variation#2",
+        a.z_child_paraitem                                                                AS "SElist_[Kei]_JPN_2WD;z_child_paraitem;Variation#2",
+        a.z_unit                                                                          AS "SElist_[Kei]_JPN_2WD;z_unit;Variation#2",
+        a.z_wp_name_get_str                                                               AS "SElist_[Kei]_JPN_2WD;z_wp_name_get_str;Variation#2",
+        CASE
+            WHEN a.z_unit = 'MAP' THEN a.z_design_file_check 
+            ELSE a.z_request_median
+        END                                                                               AS "SElist_[Kei]_JPN_2WD;z_request_median;Variation#2",
+        CONCAT(c.section_code, ' ', 
+            c.contac_person_first_name, ' ',
+            c.contac_person_last_name)                                                    AS "SElist_[Kei]_JPN_2WD;contac_user;Variation#2",
+        CASE 
+            WHEN b.update_day IS NOT NULL THEN LEFT(CAST(b.update_day AS VARCHAR), 10) 
+            ELSE NULL 
+        END                                                                               AS "SElist_[Kei]_JPN_2WD;update_day;Variation#2",
+        d.state_name                                                                      AS "SElist_[Kei]_JPN_2WD;state_name;Variation#2",
+        b.user_memo                                                                       AS "SElist_[Kei]_JPN_2WD;user_memo;Variation#2"
+    from
+        se_project_record as a
+    inner join
+        detail_data as b
+        on 
+            a.z_paravalueid = b.z_paravalueid
+    inner join
+        user_table as c
+        on
+            b.employee_number = c.employee_number
+    inner join
+        approval_status_table as d
+        on
+            b.approval_status = d.state_key
+    where a.z_wp_name_get_str = 'Variation#2'
+        and a.z_prj_number = 'SElist_[Kei]_JPN_2WD'
+        and a.z_name = 'PT構想審査'
+        and a.z_class_name_get_str = 'MBSE検討1回目'
+    ) as b
+on a."SElist_[Kei]_JPN_2WD;z_parent_paraitem;Variation#1" = b."SElist_[Kei]_JPN_2WD;z_parent_paraitem;Variation#2" and
+   a."SElist_[Kei]_JPN_2WD;z_child_paraitem;Variation#1" = b."SElist_[Kei]_JPN_2WD;z_child_paraitem;Variation#2" and
+   a."SElist_[Kei]_JPN_2WD;z_unit;Variation#1" = b."SElist_[Kei]_JPN_2WD;z_unit;Variation#2"
+inner join
+    (select
+        a.z_paravalueid                                                                   AS "SElist_[Kei]_JPN_2WD;z_paravalueid;Variation#3",
+        a.z_parent_paraitem                                                               AS "SElist_[Kei]_JPN_2WD;z_parent_paraitem;Variation#3",
+        a.z_child_paraitem                                                                AS "SElist_[Kei]_JPN_2WD;z_child_paraitem;Variation#3",
+        a.z_unit                                                                          AS "SElist_[Kei]_JPN_2WD;z_unit;Variation#3",
+        a.z_wp_name_get_str                                                               AS "SElist_[Kei]_JPN_2WD;z_wp_name_get_str;Variation#3",
+        CASE
+            WHEN a.z_unit = 'MAP' THEN a.z_design_file_check 
+            ELSE a.z_request_median
+        END                                                                               AS "SElist_[Kei]_JPN_2WD;z_request_median;Variation#3",
+        CONCAT(c.section_code, ' ', 
+            c.contac_person_first_name, ' ',
+            c.contac_person_last_name)                                                    AS "SElist_[Kei]_JPN_2WD;contac_user;Variation#3",
+        CASE 
+            WHEN b.update_day IS NOT NULL THEN LEFT(CAST(b.update_day AS VARCHAR), 10) 
+            ELSE NULL 
+        END                                                                               AS "SElist_[Kei]_JPN_2WD;update_day;Variation#3",
+        d.state_name                                                                      AS "SElist_[Kei]_JPN_2WD;state_name;Variation#3",
+        b.user_memo                                                                       AS "SElist_[Kei]_JPN_2WD;user_memo;Variation#3"
+    from
+        se_project_record as a
+    inner join
+        detail_data as b
+        on 
+            a.z_paravalueid = b.z_paravalueid
+    inner join
+        user_table as c
+        on
+            b.employee_number = c.employee_number
+    inner join
+        approval_status_table as d
+        on
+            b.approval_status = d.state_key
+    where a.z_wp_name_get_str = 'Variation#3'
+        and a.z_prj_number = 'SElist_[Kei]_JPN_2WD'
+        and a.z_name = 'PT構想審査'
+        and a.z_class_name_get_str = 'MBSE検討1回目'
+    ) as c
+on a."SElist_[Kei]_JPN_2WD;z_parent_paraitem;Variation#1" = c."SElist_[Kei]_JPN_2WD;z_parent_paraitem;Variation#3" and
+   a."SElist_[Kei]_JPN_2WD;z_child_paraitem;Variation#1" = c."SElist_[Kei]_JPN_2WD;z_child_paraitem;Variation#3" and
+   a."SElist_[Kei]_JPN_2WD;z_unit;Variation#1" = c."SElist_[Kei]_JPN_2WD;z_unit;Variation#3"

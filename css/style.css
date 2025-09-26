@@ -1,0 +1,74 @@
+
+[data-testid="collapsedControl"] {
+    display: none
+}
+.center-text {
+    text-align: center;
+}
+div[data-testid="stToolbar"] {
+visibility: hidden;
+height: 0%;
+position: fixed;
+}
+div[data-testid="stDecoration"] {
+visibility: hidden;
+height: 0%;
+position: fixed;
+}
+#MainMenu {
+visibility: hidden;
+height: 0%;
+}
+header {
+visibility: hidden;
+height: 0%;
+}
+footer {
+visibility: hidden;
+height: 0%;
+}.appview-container .main .block-container{
+    padding-top: 1rem;
+    padding-right: 3rem;
+    padding-left: 3rem;
+    padding-bottom: 1rem;
+}  
+.reportview-container {
+    padding-top: 0rem;
+    padding-right: 3rem;
+    padding-left: 3rem;
+    padding-bottom: 0rem;
+}
+header[data-testid="stHeader"] {
+    z-index: -1;
+}
+div[data-testid="stToolbar"] {
+z-index: 100;
+}
+div[data-testid="stDecoration"] {
+z-index: 100;
+}
+.center-div {
+    width: 50%;
+    margin: auto;
+    text-align: center; 
+    padding-bottom: 1rem;
+}
+.element-container:has(#button-right) + div button {
+    float: right; 
+}
+.element-container:has(#button-left) + div button {
+    float: left; 
+}
+.TabBar [data-baseweb="tab"] {
+    font-size: 10px; 
+}
+
+.ag-theme-quartz {
+    --ag-value-change-value-highlight-background-color: #cc222244;
+}
+
+.ag-theme-quartz-dark {
+    --ag-value-change-value-highlight-background-color: #cc222244;
+}
+
+
