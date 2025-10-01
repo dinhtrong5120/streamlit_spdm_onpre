@@ -39,10 +39,10 @@ class DBConnection:
             # )            
             # return connection
             connection = psycopg2.connect(
-                dbname="postgres_splittabletest",
+                dbname="SPDM_1",
                 user="postgres",
-                password="NmlUU3",
-                host="10.20.147.74",
+                password="SQL123456",
+                host="localhost",
                 port="5432"
             )              
             return connection

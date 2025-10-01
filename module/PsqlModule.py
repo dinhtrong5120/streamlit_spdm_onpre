@@ -16,10 +16,10 @@ class psql_class:
     def create_connection(self):
         try:
             connection = psycopg2.connect(
-                dbname="postgres_splittabletest",
+                dbname="SPDM_1",
                 user="postgres",
-                password="NmlUU3",
-                host="10.20.147.74",
+                password="SQL123456",
+                host="localhost",
                 port="5432"
             )
             
@@ -2982,22 +2982,7 @@ class psql_class:
         self.set_condition_log(select_list_str, select_list_str2, select_list_str3, 'Null', st.session_state.username)
         
         print('r query::')
-        
-            
 
-        # query1 = f"""
-        #     SELECT DISTINCT ON (rpr.project_id, rpr.destination_id, rpr.drivetrain_id, rpr.lot_id, rpr.phase_id,rpr.r_parameter_id, rpr.variation_id)
-        #         rpr.project_id, rpr.destination_id, rpr.drivetrain_id, rpr.drivetrain, rpr.lot_id, rpr.phase_id, rpr.phase, rpr.r_parameter_id, rpr.variation_id, rpr.variation, rpr.usecase_id
-        #     FROM r_project_record AS rpr
-        #     INNER JOIN project_info AS pjf ON rpr.project_id = pjf.id
-        #     WHERE pjf.project_code IN ({select_list_str})
-        #     AND rpr.destination IN ({select_list_str2})
-        #     AND rpr.drivetrain IN ({select_list_str3})
-        #     AND rpr.lot IN ({select_list_str4})
-        #     AND rpr.phase IN ({select_list_str5})
-        #     AND rpr.variation IN ({select_list_str6})
-        #     ORDER BY rpr.project_id, rpr.destination_id, rpr.drivetrain_id, rpr.lot_id, rpr.phase_id,rpr.r_parameter_id
-        # """
 
         #チョー　03/10
         query1 = f"""
@@ -4552,4 +4537,4 @@ class psql_class:
 
             finally:
                 if cur:
-                    cur.close()        
+                    cur.close()
