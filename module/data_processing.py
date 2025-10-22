@@ -15,6 +15,8 @@ from  module.utils import get_matching_key
 import numpy as np
 import math
 import re
+from io import BytesIO
+import pandas as pd
 
 class DiffData:
     def __init__(self,project_id,rfl_id,phase_id,diff_col,diff_value):
@@ -85,3 +87,144 @@ class RFLDataProcesser:
                     diff.append(DiffData(project_id,rfl_id,phase_id,db_col,edit_value).data)
 
         return diff
+#../module/data_processing.py
+
+import module.excel.excel_hierarchical_style as hr_styles
+from module.excel.excel_hierarchical_export import create_hierarchical_excel_data
+from db.rfl_repository import RFLRepository as rflq
+
+#telema created
+def format_grid(base_df):
+    for i in range(1,4):
+        prefix = f'hr{i}_'
+        base_df.loc[base_df[f'{prefix}wp'] == base_df[f'{prefix}wp'].shift(),f'{prefix}wp'] = ''
+        base_df.loc[base_df[f'{prefix}r_item'] == base_df[f'{prefix}r_item'].shift(),f'{prefix}r_item'] = ''
+        base_df.loc[base_df[f'{prefix}req'] == base_df[f'{prefix}req'].shift(),f'{prefix}req'] = ''
+        mask_r_scene = base_df[f'{prefix}r_scene'] == base_df[f'{prefix}r_scene'].shift()
+
+        base_df.loc[
+            (base_df[f'{prefix}r_item'].isna() | (base_df[f'{prefix}r_item'] == '')) & mask_r_scene,
+            f'{prefix}r_scene'
+        ] = ''
+
+        base_df.loc[base_df[f'{prefix}f_item'] == base_df[f'{prefix}f_item'].shift(),f'{prefix}f_item'] = ''
+        base_df.loc[base_df[f'{prefix}func'] == base_df[f'{prefix}func'].shift(),f'{prefix}func'] = ''
+
+        base_df.loc[base_df[f'{prefix}l_item'] == base_df[f'{prefix}l_item'].shift(),f'{prefix}l_item'] = ''
+        base_df.loc[base_df[f'{prefix}logic'] == base_df[f'{prefix}logic'].shift(),f'{prefix}logic'] = ''
+
+        mask_l_scene = base_df[f'{prefix}l_scene'] == base_df[f'{prefix}l_scene'].shift()
+
+        # Check if l_item is not None (or NaN) and both masks are True
+        base_df.loc[
+            (base_df[f'{prefix}l_item'].isna() | (base_df[f'{prefix}l_item'] == '')) & mask_l_scene,
+            f'{prefix}l_scene'
+        ] = ''
+
+        # 承認の重複を削除
+        check_cols = [f'{prefix}r_item',f'{prefix}f_item',f'{prefix}l_item']
+        target_cols = [f'{prefix}sender_judge',f'{prefix}sender_name',f'{prefix}sender_date',f'{prefix}sender_comment',
+                       f'{prefix}receiver_judge',f'{prefix}receiver_name',f'{prefix}receiver_date',f'{prefix}receiver_comment',
+                       f'{prefix}note']
+        mask = (base_df[check_cols] == '').all(axis=1)
+
+        # 対象の列に一括代入
+        base_df.loc[mask, target_cols] = ''
+
+    base_df =base_df.sort_values(by=['hr1_rfl_index'])
+    return base_df
+
+
+
+def create_rfl_grid_excel_data():
+    hr = st.session_state.selected_hr[0]
+    wp = st.session_state.wp[0]
+    project = st.session_state.selectoption1[0]
+    phase = st.session_state.selectoption5[0]
+
+    download_data_result = rflq.get_rfl_download_data(st.session_state.hierarchy,st.session_state.wp)
+
+    # List of suffixes you want to keep
+    suffixes = [
+        'wp', 'r_item', 'req', 'r_unit', 'r_scene',
+        'f_item', 'func', 'f_unit',
+        'l_item', 'logic', 'l_unit', 'l_scene', 'note',
+        'sender_judge', 'sender_name', 'sender_date', 'sender_comment',
+        'receiver_judge', 'receiver_name', 'receiver_date', 'receiver_comment',
+        'rfl_index'
+    ]
+
+    # Construct the list of desired columns
+    desired_cols = []
+
+    for prefix in ['hr1_', 'hr2_', 'hr3_']:
+        for suffix in suffixes:
+            col_name = prefix + suffix
+            if col_name in download_data_result.columns:
+                desired_cols.append(col_name)
+
+    # Create new DataFrame with just those columns
+    excel_export_df = download_data_result[desired_cols].copy()
+
+    # base_df = format_grid(base_df)
+    base_df = format_grid(excel_export_df) #Kyaw 10/03
+    bef_idx = 0
+    dfs = []
+    for i in range(1,4):
+        end_idx = base_df.columns.get_loc(f'hr{i}_rfl_index')
+        df_part = base_df.iloc[:, bef_idx:end_idx + 1]
+        dfs.append(df_part)
+        bef_idx = end_idx + 1
+
+    def column_replace(col_name, dict):
+        for old, new in dict.items():
+            col_name = col_name.replace(old,new)
+        return col_name
+
+    replace_dict = {
+        'hr1': 'c',
+        'hr2': 's',
+        'hr3': 'u'
+    }
+
+    df1,df2,df3 = dfs
+    df1.rename(columns=lambda x: column_replace(x,replace_dict),inplace=True)
+    df2.rename(columns=lambda x: column_replace(x,replace_dict),inplace=True)
+    df3.rename(columns=lambda x: column_replace(x,replace_dict),inplace=True)
+
+    # df_all = pd.concat([df1, df2,df3], axis=1)
+    meta_info = {
+        'PROJECT' : st.session_state.selectoption1[0],
+        'PT_TYPE' : st.session_state.architecture_name[0],
+        'Lot' : st.session_state.selectoption4[0],
+        'Phase' : st.session_state.selectoption5[0],
+    }
+    df1 = df1.drop(columns='hr1_prj_rfl',errors='ignore')
+    df1 = df1.drop(columns='c_rfl_index',errors='ignore')
+    df2 = df2.drop(columns='s_rfl_index',errors='ignore')
+    df3 = df3.drop(columns='u_rfl_index',errors='ignore')
+
+    df1 = df1.astype('object')
+    df1 = df1.where(pd.notna(df1), None)
+
+    df2 = df2.astype('object')
+    df2 = df2.where(pd.notna(df2), None)
+
+    df3 = df3.astype('object')
+    df3 = df3.where(pd.notna(df3), None)
+
+    grid_margin = hr_styles.MARGIN_COL
+    init_col = hr_styles.INITIAL_COL
+
+    system_col_loc = init_col + df1.shape[1]+ grid_margin
+    unit_col_loc = system_col_loc + df2.shape[1] + grid_margin
+    df1_grid = hr_styles.GridBlock(init_col)
+    df2_grid = hr_styles.GridBlock(system_col_loc)
+    df3_grid = hr_styles.GridBlock(unit_col_loc)
+
+    excel_data1 = create_hierarchical_excel_data(df1,df1_grid,meta_info=meta_info,wp=wp)
+    excel_data2 = create_hierarchical_excel_data(df2,df2_grid,wb=BytesIO(excel_data1),meta_info=None)
+    excel_data3 = create_hierarchical_excel_data(df3,df3_grid,wb=BytesIO(excel_data2),meta_info=None)
+
+    return excel_data3
+

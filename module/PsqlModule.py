@@ -1083,7 +1083,9 @@ class psql_class:
         se_data_stuck['params0p']=df_params_merged
 
         #新規UIでのPrj選択ではvariationの選択をしなくなったため、selectoption6は空白のリストとなってしまい、新規作成処理でのエラーになった。存在するこの時点でprj_info_list内に存在しているvariationの一覧をselectoption6として代替する　山口 3/21
-        variation_unique = prj_info_list['variation'].drop_duplicates().tolist() 
+        variation_unique = prj_info_list['variation'].drop_duplicates().tolist()
+        print("==============================")
+        print("==============================: ", variation_unique)
         st.session_state['selectoption6'] = variation_unique
         
         return prj_info_list, se_data_stuck

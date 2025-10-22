@@ -11,7 +11,7 @@ from db.db_connection import DBConnection as DBCon
 from queries import rfl_pj_select as pj_select_query
 # from query_builder import QueryBuilder as qb
 from queries import rfl_select as rfl_select_query,rfl_update as rfl_update_query
-
+from pandas.api.types import is_datetime64_any_dtype
 class RFLRepository:
 
     @staticmethod
@@ -357,3 +357,360 @@ class RFLRepository:
             df = df.convert_dtypes()
 
             return df
+
+    @staticmethod
+    def get_rfl_download_data(hierarchy_list=[], wp_list=[]):
+        with DBCon() as connection:
+            # リストの要素をシングルクォートで囲んでカンマで結合
+            hierarchy_list_str = ', '.join(f"'{item}'" for item in hierarchy_list)
+            wp_list_str = ', '.join(f"'{item}'" for item in wp_list)
+            if hierarchy_list_str and wp_list_str:
+
+                # 選択されたＷＰの車両の情報を取得
+                df1_query = f"""
+                    SELECT 
+                        pj_id, 
+                        pj_code, 
+                        -- drivetrain, 
+                        hierarchy, 
+                        hierarchy_id, 
+                        r_wp_id, 
+                        r_wp AS wp, 
+                        r_wp_summary_index, 
+                        rfl_id, 
+                        r_s_id, 
+                        l_s_id, 
+                        r_item, 
+                        r_item_2, 
+                        prfl_r AS req, 
+                        r_unit, 
+                        r_uc_id, 
+                        r_uc AS r_scene, 
+                        f_id, 
+                        f_item, 
+                        prfl_f AS func, 
+                        f_unit, 
+                        l_id, 
+                        l_item, 
+                        allocation, 
+                        l_wp, 
+                        l_wp_id, 
+                        prfl_l AS logic, 
+                        l_unit, 
+                        l_uc_id, 
+                        l_uc AS l_scene, 
+                        prfl_note AS note, 
+                        n_r_s_id, 
+                        ph_id, 
+                        phase_id, 
+                        phase, 
+                        n_wp, 
+                        flag_display_on_summary_logic, 
+                        flag_to, 
+                        index AS rfl_index, 
+                        l_r_s_p_i, 
+                        sender_judge, 
+                        sender_name, 
+                        sender_date, 
+                        sender_comment, 
+                        receiver_judge, 
+                        receiver_name, 
+                        receiver_date, 
+                        receiver_comment, 
+                        to_solving_value, 
+                        log_condition
+                    FROM 
+                        rfl_view_tlm
+                    WHERE pj_id = 14 AND phase_id = 3 AND hierarchy_id = 1 AND r_wp = {(wp_list_str)}
+                    ORDER BY index
+                """
+                # 選択されたＷＰのシステムの情報を取得
+                df2_query = f"""
+                    SELECT 
+                        pj_id, 
+                        pj_code, 
+                        -- drivetrain, 
+                        hierarchy, 
+                        hierarchy_id, 
+                        r_wp_id, 
+                        r_wp AS wp, 
+                        r_wp_summary_index, 
+                        rfl_id, 
+                        r_s_id, 
+                        l_s_id, 
+                        r_item, 
+                        r_item_2, 
+                        prfl_r AS req, 
+                        r_unit, 
+                        r_uc_id, 
+                        r_uc AS r_scene, 
+                        f_id, 
+                        f_item, 
+                        prfl_f AS func, 
+                        f_unit, 
+                        l_id, 
+                        l_item, 
+                        allocation, 
+                        l_wp, 
+                        l_wp_id, 
+                        prfl_l AS logic, 
+                        l_unit, 
+                        l_uc_id, 
+                        l_uc AS l_scene, 
+                        prfl_note AS note, 
+                        n_r_s_id, 
+                        ph_id, 
+                        phase_id, 
+                        phase, 
+                        n_wp, 
+                        flag_display_on_summary_logic, 
+                        flag_to, 
+                        index AS rfl_index, 
+                        l_r_s_p_i, 
+                        sender_judge, 
+                        sender_name, 
+                        sender_date, 
+                        sender_comment, 
+                        receiver_judge, 
+                        receiver_name, 
+                        receiver_date, 
+                        receiver_comment, 
+                        to_solving_value, 
+                        log_condition
+                    FROM 
+                        rfl_view_tlm
+                    WHERE pj_id = 14 AND phase_id = 3 AND hierarchy_id = 2 AND r_wp = {(wp_list_str)}
+                    ORDER BY index
+                """
+                # 選択されたＷＰのユニットの情報を取得
+                df3_query = f"""
+                    SELECT 
+                        pj_id, 
+                        pj_code, 
+                        -- drivetrain, 
+                        hierarchy, 
+                        hierarchy_id, 
+                        r_wp_id, 
+                        r_wp AS wp, 
+                        r_wp_summary_index, 
+                        rfl_id, 
+                        r_s_id, 
+                        l_s_id, 
+                        r_item, 
+                        r_item_2, 
+                        prfl_r AS req, 
+                        r_unit, 
+                        r_uc_id, 
+                        r_uc AS r_scene, 
+                        f_id, 
+                        f_item, 
+                        prfl_f AS func, 
+                        f_unit, 
+                        l_id, 
+                        l_item, 
+                        allocation, 
+                        l_wp, 
+                        l_wp_id, 
+                        prfl_l AS logic, 
+                        l_unit, 
+                        l_uc_id, 
+                        l_uc AS l_scene, 
+                        prfl_note AS note, 
+                        n_r_s_id, 
+                        ph_id, 
+                        phase_id, 
+                        phase, 
+                        n_wp, 
+                        flag_display_on_summary_logic, 
+                        flag_to, 
+                        index AS rfl_index, 
+                        l_r_s_p_i, 
+                        sender_judge, 
+                        sender_name, 
+                        sender_date, 
+                        sender_comment, 
+                        receiver_judge, 
+                        receiver_name, 
+                        receiver_date, 
+                        receiver_comment, 
+                        to_solving_value, 
+                        log_condition
+                    FROM 
+                        rfl_view_tlm
+                    WHERE pj_id = 14 AND phase_id = 3 AND hierarchy_id = 3 AND r_wp = {(wp_list_str)}
+                    ORDER BY index
+                """
+                df1 = pd.read_sql(df1_query, connection)
+                df2 = pd.read_sql(df2_query, connection)
+                df3 = pd.read_sql(df3_query, connection)
+                for df in [df1, df2, df3]:
+                    if not df.empty:
+                        df["r_item"] = df["r_item"].astype(str).str.strip()
+                        df["f_item"] = df["f_item"].astype(str).str.strip()
+                        df["l_item"] = df["l_item"].astype(str).str.strip()
+                        if is_datetime64_any_dtype(df['receiver_date']):
+                            df['receiver_date'] = df['receiver_date'].dt.round('S')
+                        if is_datetime64_any_dtype(df['sender_date']):
+                            df['sender_date'] = df['sender_date'].dt.round('S')
+
+                def append_missing_df3_rows(hierarchy_res: pd.DataFrame, df3: pd.DataFrame) -> pd.DataFrame:
+                    df3_ids = set(df3['r_s_id'])
+                    existing_hr3_ids = set(hierarchy_res['hr3_r_s_id'].dropna())
+
+                    missing_ids = df3_ids - existing_hr3_ids
+
+                    if not missing_ids:
+                        return hierarchy_res  # all df3 IDs are already present
+
+                    # Get missing rows
+                    missing_rows = df3[df3['r_s_id'].isin(missing_ids)]
+                    missing_rows_prefixed = missing_rows.rename(columns=lambda col: f'hr3_{col}')
+
+                    # Add hr3_index column explicitly with None (if it's in final DataFrame structure)
+                    if 'hr3_index' in hierarchy_res.columns:
+                        missing_rows_prefixed['hr3_index'] = None
+
+                    # Fill hr1_ and hr2_ columns with None
+                    hr1_cols = [col for col in hierarchy_res.columns if col.startswith('hr1_')]
+                    hr2_cols = [col for col in hierarchy_res.columns if col.startswith('hr2_')]
+
+                    for col in hr1_cols + hr2_cols:
+                        missing_rows_prefixed[col] = None
+
+                    # Reorder columns
+                    final_columns = hierarchy_res.columns
+                    missing_rows_prefixed = missing_rows_prefixed[final_columns]
+
+                    # Append and return
+                    return pd.concat([hierarchy_res, missing_rows_prefixed], ignore_index=True)
+
+                def conditional_sort_hierarchical_df(df):
+                    sort_cols = ['hr1_index', 'hr2_index', 'hr3_index']
+                    existing_cols = [col for col in sort_cols if col in df.columns]
+                    return df.sort_values(by=existing_cols, ascending=True).reset_index(drop=True)
+
+                def build_full_hierarchical_dataframe(df1, df2, df3):
+                    rows = []
+
+                    def prefix_dict(row, prefix):
+                        return {f"{prefix}_{col}": row[col] for col in row.index}
+
+                    # Build column names for each level even if empty
+                    hr1_cols = [f"hr1_{col}" for col in df1.columns]
+                    hr2_cols = [f"hr2_{col}" for col in df2.columns]
+                    hr3_cols = [f"hr3_{col}" for col in df3.columns]
+
+                    # Case 1: All df1, df2, df3 are available
+                    if not df1.empty and not df2.empty and not df3.empty:
+                        for _, row1 in df1.iterrows():
+                            df1_data = prefix_dict(row1, 'hr1')
+                            df2_matches = df2[df2['r_s_id'] == row1['n_r_s_id']]
+                            if df2_matches.empty:
+                                row_data = {**df1_data}
+                                for col in hr2_cols + hr3_cols:
+                                    row_data[col] = None
+                                rows.append(row_data)
+                            else:
+                                for _, row2 in df2_matches.iterrows():
+                                    df2_data = prefix_dict(row2, 'hr2')
+                                    df3_matches = df3[df3['r_s_id'] == row2['n_r_s_id']]
+                                    if df3_matches.empty:
+                                        row_data = {**df1_data, **df2_data}
+                                        for col in hr3_cols:
+                                            row_data[col] = None
+                                        rows.append(row_data)
+                                    else:
+                                        for _, row3 in df3_matches.iterrows():
+                                            df3_data = prefix_dict(row3, 'hr3')
+                                            rows.append({**df1_data, **df2_data, **df3_data})
+
+                    # Case 2: df1 + df2 only (df3 is empty)
+                    elif not df1.empty and not df2.empty:
+                        for _, row1 in df1.iterrows():
+                            df1_data = prefix_dict(row1, 'hr1')
+                            df2_matches = df2[df2['r_s_id'] == row1['n_r_s_id']]
+                            if df2_matches.empty:
+                                row_data = {**df1_data}
+                                for col in hr2_cols + hr3_cols:
+                                    row_data[col] = None
+                                rows.append(row_data)
+                            else:
+                                for _, row2 in df2_matches.iterrows():
+                                    df2_data = prefix_dict(row2, 'hr2')
+                                    row_data = {**df1_data, **df2_data}
+                                    for col in hr3_cols:
+                                        row_data[col] = None
+                                    rows.append(row_data)
+
+                    # Case 3: df1 + df3 only (df2 is empty)
+                    elif not df1.empty and not df3.empty:
+                        for _, row1 in df1.iterrows():
+                            df1_data = prefix_dict(row1, 'hr1')
+                            df3_matches = df3[df3['r_s_id'] == row1['n_r_s_id']]
+                            if df3_matches.empty:
+                                row_data = {**df1_data}
+                                for col in hr2_cols + hr3_cols:
+                                    row_data[col] = None
+                                rows.append(row_data)
+                            else:
+                                for _, row3 in df3_matches.iterrows():
+                                    df3_data = prefix_dict(row3, 'hr3')
+                                    row_data = {**df1_data, **df3_data}
+                                    for col in hr2_cols:
+                                        row_data[col] = None
+                                    rows.append(row_data)
+
+                    # Case 4: df2 + df3 only (df1 is empty)
+                    elif not df2.empty and not df3.empty:
+                        for _, row2 in df2.iterrows():
+                            df2_data = prefix_dict(row2, 'hr2')
+                            df3_matches = df3[df3['r_s_id'] == row2['n_r_s_id']]
+                            if df3_matches.empty:
+                                row_data = {**df2_data}
+                                for col in hr1_cols + hr3_cols:
+                                    row_data[col] = None
+                                rows.append(row_data)
+                            else:
+                                for _, row3 in df3_matches.iterrows():
+                                    df3_data = prefix_dict(row3, 'hr3')
+                                    row_data = {**df2_data, **df3_data}
+                                    for col in hr1_cols:
+                                        row_data[col] = None
+                                    rows.append(row_data)
+
+                    # Case 5: df1 only
+                    elif not df1.empty:
+                        for _, row1 in df1.iterrows():
+                            row_data = prefix_dict(row1, 'hr1')
+                            for col in hr2_cols + hr3_cols:
+                                row_data[col] = None
+                            rows.append(row_data)
+
+                    # Case 6: df2 only
+                    elif not df2.empty:
+                        for _, row2 in df2.iterrows():
+                            row_data = prefix_dict(row2, 'hr2')
+                            for col in hr1_cols + hr3_cols:
+                                row_data[col] = None
+                            rows.append(row_data)
+
+                    # Case 7: df3 only
+                    elif not df3.empty:
+                        for _, row3 in df3.iterrows():
+                            row_data = prefix_dict(row3, 'hr3')
+                            for col in hr1_cols + hr2_cols:
+                                row_data[col] = None
+                            rows.append(row_data)
+
+                    return pd.DataFrame(rows)
+
+                hierarchy_res = build_full_hierarchical_dataframe(df1, df2, df3)
+                if not df3.empty:
+                    hierarchy_res = append_missing_df3_rows(hierarchy_res, df3)
+                # result_df = build_full_hierarchical_dataframe(df1, df2, df3)
+                sorted_hierarchy_res = conditional_sort_hierarchical_df(hierarchy_res)
+
+                return sorted_hierarchy_res
+
+            else:
+                return []

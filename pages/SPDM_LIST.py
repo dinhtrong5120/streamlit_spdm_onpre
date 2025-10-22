@@ -15,7 +15,7 @@ from config.config import RFLGridConfig
 import streamlit.components.v1 as components
 from db.rfl_repository import RFLRepository as rflq #telema-kyaw
 import os
-
+from module.data_processing import create_rfl_grid_excel_data
 sql = psql_class()
 
 now = datetime.datetime.now()
@@ -1147,7 +1147,34 @@ def make_rfl_tree_button(i):
     if st.button("ツリー", key=f'tree_btn{i}'):
         st.session_state.tree_view = True
         st.rerun()
+def make_rfl_download_button(key_no):
+    """階層繋がりグリッドダウンロードボタン
 
+    Args:
+        key_no (string): ユニークキー
+    """
+    init_session_state('rfl_excel_data')
+    # if not st.session_state.rfl_grid_download_ready:
+    if "rfl_grid_download_ready" not in st.session_state:
+        if st.button('ダウンロードデータ作成'):
+            with st.spinner("データを準備中です"):
+                excel_data = create_rfl_grid_excel_data()
+                st.session_state.rfl_excel_data = excel_data
+                st.session_state.rfl_grid_download_ready = True
+                st.rerun()
+    else:
+        with st.container():
+            clicked = st.download_button(
+                label="ダウンロード",
+                data=st.session_state.rfl_excel_data,
+                file_name=f"RFL_XXXX_{st.session_state.wp[0]}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key=f'download_btn{key_no+1}')
+            msg = st.empty()
+            msg.success('ダウンロードが可能になりました。')
+            if clicked:
+                st.session_state.rfl_grid_download_ready = False
+                st.rerun()
 
 # -----Telema-----
 # RFLプルダウン更新
@@ -1746,7 +1773,8 @@ if int(st.session_state['chosen_id']) == 4:
             with cols_btn[3]:
                 make_rfl_compare_button(i)
             with cols_btn[4]:
-                make_rfl_tree_button(i)
+                # make_rfl_tree_button(i)
+                make_rfl_download_button(i)
             with cols_btn[5]:
                 rfl_matrix_button()
             with cols_btn[6]:

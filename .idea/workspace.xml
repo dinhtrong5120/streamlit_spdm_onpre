@@ -5,15 +5,17 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a7e0a43f-69f0-49f9-8c86-eb4f3e852b0c" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/spdm_app_testserver_rfl_design_0912.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/spdm_app_testserver_rfl_design_0912.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/const/constpara.py" beforeDir="false" afterPath="$PROJECT_DIR$/const/constpara.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/db/db_connection.py" beforeDir="false" afterPath="$PROJECT_DIR$/db/db_connection.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/rfl_repository.py" beforeDir="false" afterPath="$PROJECT_DIR$/db/rfl_repository.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/module/PsqlModule.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/PsqlModule.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/module/mail_send.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/mail_send.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module/data_processing.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/data_processing.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/SPDM_LIST.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/SPDM_LIST.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/df2.xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/df2_filtered.xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/rlist_data_stuck.xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements_1.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements_2609.txt" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -51,18 +53,22 @@
     <option name="showLibraryContents" value="true" />
     <option name="showMembers" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.SPDM_LIST.executor": "Run",
-    "Python.streamlit.executor": "Debug",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "/Users/TrongKieu/Downloads/untitled folder 2/spdm_app_testserver_rfl_design_0912"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.SPDM_LIST.executor&quot;: &quot;Run&quot;,
+    &quot;Python.streamlit.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;local__congty&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/TrongKieu/Downloads/untitled folder 2/spdm_app_testserver_rfl_design_0912&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.lookFeel&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/module/excel" />
     </key>
   </component>
   <component name="RunManager">
@@ -114,6 +120,71 @@
           <url>file://$PROJECT_DIR$/module/PsqlModule.py</url>
           <line>3288</line>
           <option name="timeStamp" value="19" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/pages/SPDM_LIST.py</url>
+          <line>1189</line>
+          <option name="timeStamp" value="111" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/pages/SPDM_LIST.py</url>
+          <line>1219</line>
+          <option name="timeStamp" value="112" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/pages/SPDM_LIST.py</url>
+          <line>1160</line>
+          <option name="timeStamp" value="114" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/db/rfl_repository.py</url>
+          <line>555</line>
+          <option name="timeStamp" value="115" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/module/PsqlModule.py</url>
+          <line>903</line>
+          <option name="timeStamp" value="116" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/module/data_processing.py</url>
+          <line>169</line>
+          <option name="timeStamp" value="119" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/module/data_processing.py</url>
+          <line>128</line>
+          <option name="timeStamp" value="120" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/db/rfl_repository.py</url>
+          <line>369</line>
+          <option name="timeStamp" value="121" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/module/dialog.py</url>
+          <line>1318</line>
+          <option name="timeStamp" value="124" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/pages/SPDM_LIST.py</url>
+          <line>263</line>
+          <option name="timeStamp" value="125" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/module/dialog.py</url>
+          <line>1341</line>
+          <option name="timeStamp" value="126" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/db/rfl_repository.py</url>
+          <line>545</line>
+          <option name="timeStamp" value="127" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/module/data_processing.py</url>
+          <line>144</line>
+          <option name="timeStamp" value="128" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
