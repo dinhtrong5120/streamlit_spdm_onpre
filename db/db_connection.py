@@ -39,7 +39,7 @@ class DBConnection:
             # )            
             # return connection
             connection = psycopg2.connect(
-                dbname="SPDM_1",
+                dbname="SPDM_2",
                 user="postgres",
                 password="SQL123456",
                 host="localhost",
