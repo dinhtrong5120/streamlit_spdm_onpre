@@ -13,7 +13,6 @@ import module.utils as utl
 from module.PsqlModule import psql_class
 import time
 from st_aggrid.grid_options_builder import GridOptionsBuilder
-import re
 
 # CSSファイルの内容を読み込む
 with open(co.css, encoding='utf-8') as f:
@@ -121,9 +120,6 @@ agg_function = {
         const pivotKeysFoldStatus = params?.pivotResultColumn?.colDef?.pivotKeys?.length > 1 ? false : true;
         //console.log('pivotKeysFoldStatus: ', pivotKeysFoldStatus);
         const rowNodeLevel = params?.rowNode?.level;
-        if (rowNodeLevel === 0){
-            return null;          
-        }
         
         let aggResult = '';
         let aggValuesList = [];
@@ -150,25 +146,6 @@ agg_function = {
     }"""),
 }
 # ==========
-
-#サマリーのTO自動判定の背景色変更 #Kyaw 06/20
-summaryTredeOffBGcolor = JsCode("""
-function(params) {
-    const keys = Object.keys(params.data);
-    
-    for (let i = 0; i < keys.length; i++) {
-        const key = keys[i];
-        if (key.startsWith('is_to_') && params.data[key] === true) {
-            // Highlight row if any is_to_* is true
-            return {
-                'backgroundColor': 'lightyellow'
-            };
-        }
-    }
-
-    return {};  // Default: no background color
-}
-""")
 
 def filter_items(df,item_name):
     logic = f"{item_name}_logic"
@@ -207,21 +184,7 @@ def is_valid_number(value):
 
 #チョー　05/19 TO自動判定機能
 def check_overlap(v1, op1, v2, op2):
-    # print(f'in fun: {v1},{op1} and {v2},{op2}') 
-    #07/17 Kyaw #change jp char to eng char
-    op_map = {
-        '＞':'>',
-        '>':'>',
-        '＜':'<',
-        '<':'<',
-        '＝':'=',
-        '=':'=',
-        '≧':'≧',
-        '≦':'≦',
-    }
-    op1 = op_map.get(op1,op1)
-    op2 = op_map.get(op2,op2)
-
+    print(f'in fun: {v1},{op1} and {v2},{op2}')
     v1 = float(v1)
     v2 = float(v2)
     if v1 == v2:
@@ -242,73 +205,32 @@ def check_overlap(v1, op1, v2, op2):
         return op1 in {'<', '=', '≦'} and op2 in {'>', '=', '≧'}
     return False
 
-# #チョー　TOになる行の「to_result」にTrueを入れる
-# def update_overlap_df(df,df_name):
-#     # Prepare result column
-#     df['to_result'] = False
-#     # Group and compare within groups
-#     group_df = df.groupby([f'{df_name}_r_wp', f'{df_name}_l_wp', f'{df_name}_l_item'], dropna=False)
-
-#     for name, group in group_df:
-#         # if df_name == 's':
-#         #     if group.iloc[0][f'{df_name}_r_wp'] == '4WD' and group.iloc[0][f'{df_name}_l_wp'] == 'Unit(ePT)' and (group.iloc[0][f'{df_name}_l_item'] == 'FR MOT_Max_Speed_力行_車両要求' or group.iloc[0][f'{df_name}_l_item'] == 'RR MOT_Max_Speed_力行_車両要求'):
-#         #         st.write(f'df data in {df_name}:', group)
-#         # elif df_name == 'c':
-#         #     if group.iloc[0][f'{df_name}_r_wp'] == '4WD' and group.iloc[0][f'{df_name}_l_wp'] == 'PWT(4WD)' and (group.iloc[0][f'{df_name}_l_item'] == 'DS駆動 FR トルク' or group.iloc[0][f'{df_name}_l_item'] == 'DS駆動 RR トルク'):
-#         #         st.write(f'df data in {df_name}:', group)
-#         indices = group.index.tolist()
-#         n = len(group)
-#         conflict_found = False  # Flag to track if conflict was found
-#         for i in range(n):
-#             if conflict_found:  # Stop processing once if conflict was found
-#                 break
-#             row_i = group.iloc[i]
-#             val_i = row_i[f'{df_name}_logic']
-#             op_i = row_i[f'{df_name}_log_condition']
-#             # Check validity
-#             if not is_valid_number(val_i) or pd.isna(op_i) or op_i.strip() not in ('<','>','=','≧','≦'):
-#                 continue
-
-#             for j in range(i + 1, n):
-#                 row_j = group.iloc[j]
-#                 val_j = row_j[f'{df_name}_logic']
-#                 op_j = row_j[f'{df_name}_log_condition']
-
-#                 # Check validity
-#                 if not is_valid_number(val_j) or pd.isna(op_j) or op_j.strip() not in ('<','>','=','≧','≦'):
-#                     continue
-
-#                 if check_overlap(val_i, op_i, val_j, op_j):
-#                     print(f'match result-> val1: {val_i}{op_i} and val2: {val_j}{op_j}')
-#                     # Mark both rows as True for conflict
-#                     df.at[indices[i], 'to_result'] = True
-#                     df.at[indices[j], 'to_result'] = True
-#                     conflict_found = True  # Stop further checks for this group
-#                     break
-#     return df
-
 #チョー　TOになる行の「to_result」にTrueを入れる
 def update_overlap_df(df,df_name):
     # Prepare result column
     df['to_result'] = False
     # Group and compare within groups
     group_df = df.groupby([f'{df_name}_r_wp', f'{df_name}_l_wp', f'{df_name}_l_item'], dropna=False)
-    
+
     for name, group in group_df:
+        # if df_name == 's':
+        #     if group.iloc[0][f'{df_name}_r_wp'] == '4WD' and group.iloc[0][f'{df_name}_l_wp'] == 'Unit(ePT)' and (group.iloc[0][f'{df_name}_l_item'] == 'FR MOT_Max_Speed_力行_車両要求' or group.iloc[0][f'{df_name}_l_item'] == 'RR MOT_Max_Speed_力行_車両要求'):
+        #         st.write(f'df data in {df_name}:', group)
+        # elif df_name == 'c':
+        #     if group.iloc[0][f'{df_name}_r_wp'] == '4WD' and group.iloc[0][f'{df_name}_l_wp'] == 'PWT(4WD)' and (group.iloc[0][f'{df_name}_l_item'] == 'DS駆動 FR トルク' or group.iloc[0][f'{df_name}_l_item'] == 'DS駆動 RR トルク'):
+        #         st.write(f'df data in {df_name}:', group)
         indices = group.index.tolist()
         n = len(group)
-        matched_indices = set()  # Track matched rows
-        # conflict_found = False  # Flag to track if conflict was found
+        conflict_found = False  # Flag to track if conflict was found
         for i in range(n):
+            if conflict_found:  # Stop processing once if conflict was found
+                break
             row_i = group.iloc[i]
             val_i = row_i[f'{df_name}_logic']
             op_i = row_i[f'{df_name}_log_condition']
             # Check validity
-            if not is_valid_number(val_i) or pd.isna(op_i) or op_i.strip() not in ('<','＜','>','＞','=','＝','≧','≦'): #07/17 Kyaw
-                df.at[indices[i], f'{df_name}_to_pattern'] = '比較対象がない'
+            if not is_valid_number(val_i) or pd.isna(op_i) or op_i.strip() not in ('<','>','=','≧','≦'):
                 continue
-
-            matched = False  # Track if a match was found
 
             for j in range(i + 1, n):
                 row_j = group.iloc[j]
@@ -316,119 +238,25 @@ def update_overlap_df(df,df_name):
                 op_j = row_j[f'{df_name}_log_condition']
 
                 # Check validity
-                if not is_valid_number(val_j) or pd.isna(op_j) or op_j.strip() not in ('<','＜','>','＞','=','＝','≧','≦'): #07/17 Kyaw
+                if not is_valid_number(val_j) or pd.isna(op_j) or op_j.strip() not in ('<','>','=','≧','≦'):
                     continue
 
                 if check_overlap(val_i, op_i, val_j, op_j):
-                    # print(f'match result-> val1: {val_i}{op_i} and val2: {val_j}{op_j}')
+                    print(f'match result-> val1: {val_i}{op_i} and val2: {val_j}{op_j}')
                     # Mark both rows as True for conflict
                     df.at[indices[i], 'to_result'] = True
                     df.at[indices[j], 'to_result'] = True
-                    # conflict_found = True  # Stop further checks for this group
-                    df.at[indices[i], f'{df_name}_to_pattern'] = 'TO'
-                    df.at[indices[j], f'{df_name}_to_pattern'] = 'TO'
-                    matched_indices.add(indices[i])
-                    matched_indices.add(indices[j])
-                    matched = True
+                    conflict_found = True  # Stop further checks for this group
                     break
-            if not matched and indices[i] not in matched_indices:
-                df.at[indices[i], f'{df_name}_to_pattern'] = 'TOがない'
     return df
-
-#Kyaw 06/20
-def update_summary_df(df, performance_list):
-    selected_variation = st.session_state.selected_variation
-    op1 = '='  # fixed operator
-    value1_col = f'{selected_variation}_value'
-    allowed_ops = {'<','＜','>','＞','=','＝','≧','≦'} #07/17 Kyaw
-
-    for perf_key in performance_list:
-        value2_col = f'logic_{perf_key}'
-        op2_col = f'log_condition_{perf_key}'
-
-        # Skip if required columns are missing
-        if value1_col not in df.columns or value2_col not in df.columns or op2_col not in df.columns:
-            st.write(f"Skipping {perf_key} due to missing column")
-            continue
-
-        def row_compare(row):
-            value1 = row[value1_col]
-            value2 = row[value2_col]
-            op2 = row[op2_col]
-
-            # print('value1: ', value1)
-            # print('value2: ', value2)
-            # print('op2: ', op2)
-
-            # Check if value1 or value2 is missing (None, NaN, empty)
-            if value1 is None or value2 is None or value1 == '' or value2 == '' or not is_valid_number(value1) or not is_valid_number(value2):
-                # df.at[row.name, f'to_pattern_{perf_key}'] = "値がない"
-                df.at[row.name, f'to_pattern_{perf_key}'] = "比較対象がない"
-                return False
-
-            # Check if op1 or op2 is missing or invalid
-            if op1 is None or op1 == '' or op2 is None or op2 == '' or op2 not in allowed_ops:
-                # df.at[row.name, f'to_pattern_{perf_key}'] = "等号がない"
-                df.at[row.name, f'to_pattern_{perf_key}'] = "比較対象がない"
-                return False
-
-            # Convert values to float
-            value1f = float(value1)
-            value2f = float(value2)
-
-            # Check opposite signs condition
-            if (value1f < 0 < value2f) or (value2f < 0 < value1f):
-                df.at[row.name, f'to_pattern_{perf_key}'] = "等号が違い"
-                return False
-
-            # Run your overlap check
-            if not check_overlap(value1f, op1, value2f, op2):
-                # df.at[row.name, f'to_pattern_{perf_key}'] = "比較してもTOがない"
-                df.at[row.name, f'to_pattern_{perf_key}'] = "TOなし"
-                return False
-
-            # If all checks pass, clear any previous message (optional)
-            df.at[row.name, f'to_pattern_{perf_key}'] = "TO"
-
-            return True
-        
-        def conditional_row_compare(row):
-            col_name = f'is_to_{perf_key}'
-            if col_name in df.columns and pd.notna(row[col_name]):
-                # print('row col name: ', row[col_name])
-                return row[col_name]
-            return row_compare(row)
-
-        # df[f'compare_result_{perf_key}'] = df.apply(row_compare, axis=1)
-        df[f'is_to_{perf_key}'] = df.apply(conditional_row_compare, axis=1)
-
-    # Summary column creation (AFTER all performance columns are processed)
-    to_pattern_cols = [f'to_pattern_{perf_key}' for perf_key in performance_list if f'to_pattern_{perf_key}' in df.columns]
-    def summarize_to_pattern(row):
-        values = [row[col] for col in to_pattern_cols]
-        if 'TO' in values:
-            return 'TO'
-        elif 'TOなし' in values:
-            return 'TOなし'
-        else:
-            return '比較対象がない'
-
-    df['summary_to_pattern'] = df.apply(summarize_to_pattern, axis=1)
-
-    return df
-
-
 
 def c_grid(filter):
     
     # print('c df before: ', datetime.datetime.now())
-    # df = st.session_state.rfl_list
-    df = st.session_state.rfl_matrix #telema-kyaw
+    df = st.session_state.rfl_list
     # print('c df after: ', datetime.datetime.now())
     # df1 = df[['c_r_wp','c_r_item_2', 'c_l_item', 'c_l_wp', 'c_logic','c_r_scene','c_l_scene']]
-    # df1 = df[['c_r_wp','c_r_item_2', 'c_l_item', 'c_l_wp', 'c_logic','c_r_scene','c_l_scene','c_log_condition']] #チョー 05/19
-    df1 = df[['c_r_wp','c_r_item_2', 'c_l_item', 'c_l_wp', 'c_logic','c_r_scene','c_l_scene','c_log_condition','c_to_pattern']] #Kyaw 06/20
-
+    df1 = df[['c_r_wp','c_r_item_2', 'c_l_item', 'c_l_wp', 'c_logic','c_r_scene','c_l_scene','c_log_condition']] #チョー 05/19
     df1 = df1[df1['c_r_wp'].notna()]
     df1['c_logic_c_condition'] = df1['c_log_condition'].replace('', None).fillna('') +  df1['c_logic'].replace('', None).fillna('')#チョー 05/19 c_logic,c_log_conditionをs_logic_s_conditionに入れる
 
@@ -454,7 +282,7 @@ def c_grid(filter):
         {'field': 'c_l_item', 'rowGroup': True, 'suppressMovable': True, 'columnGroupShow': 'never'}, 
         # {'field': 'c_logic', 'headerName':'Value','aggFunc': 'firstNotNull', 'suppressMovable': True}, #Ha-san 0221: add aggregation function as default
         {'field': 'c_logic_c_condition', 'headerName':'Value','aggFunc': 'firstNotNull', 'suppressMovable': True}, #チョー 05/19
-        {'field': 'c_to_pattern', 'headerName':'TO状況','aggFunc': 'firstNotNull','suppressMovable': True}, #Kyaw 06/20
+
     ]
 
 
@@ -492,12 +320,10 @@ def c_grid(filter):
 
 def s_grid(filter):
 
-    # df = st.session_state.rfl_list
-    df = st.session_state.rfl_matrix #telema-kyaw
+    df = st.session_state.rfl_list
     # st.write('s: ', df)
     # df2 = df[['s_r_wp','s_r_item_2', 's_l_item', 's_l_wp', 's_logic','s_r_scene','s_l_scene']]
-    # df2 = df[['s_r_wp','s_r_item_2', 's_l_item', 's_l_wp', 's_logic','s_r_scene','s_l_scene','s_log_condition']] #チョー 05/19
-    df2 = df[['s_r_wp','s_r_item_2', 's_l_item', 's_l_wp', 's_logic','s_r_scene','s_l_scene','s_log_condition','s_to_pattern']] #Kyaw 06/20
+    df2 = df[['s_r_wp','s_r_item_2', 's_l_item', 's_l_wp', 's_logic','s_r_scene','s_l_scene','s_log_condition']] #チョー 05/19
     df2 = df2[df2['s_r_wp'].notna()]
     df2['s_logic_s_condition'] = df2['s_log_condition'].replace('', None).fillna('') + df2['s_logic'].replace('', None).fillna('') #チョー 05/19 s_logic,s_log_conditionをs_logic_s_conditionに入れる
 
@@ -521,7 +347,6 @@ def s_grid(filter):
         # {'field': 's_logic', 'headerName':'', 'aggFunc': 'first', 'suppressMovable': True}
         # {'field': 's_logic', 'headerName':'Value','aggFunc': 'firstNotNull', 'suppressMovable': True} #Ha-san 0221: add aggregation function as default
         {'field': 's_logic_s_condition', 'headerName':'Value','aggFunc': 'firstNotNull', 'suppressMovable': True}, #チョー 05/19
-        {'field': 's_to_pattern', 'headerName':'TO状況','aggFunc': 'firstNotNull', 'suppressMovable': True}, #Kyaw 06/20
     ]
     
     grid_options = {     
@@ -550,11 +375,10 @@ def s_grid(filter):
 
 def u_grid(filter):
 
-    # df = st.session_state.rfl_list
-    df = st.session_state.rfl_matrix #telema-kyaw
+    df = st.session_state.rfl_list
+    
     # df3 = df[['u_r_wp','u_r_item_2', 'u_l_item', 'u_l_wp', 'u_logic','u_r_scene','u_l_scene']].dropna()
-    # df3 = df[['u_r_wp','u_r_item_2', 'u_l_item', 'u_l_wp', 'u_logic','u_r_scene','u_l_scene','u_log_condition']]
-    df3 = df[['u_r_wp','u_r_item_2', 'u_l_item', 'u_l_wp', 'u_logic','u_r_scene','u_l_scene','u_log_condition','u_to_pattern']] #Kyaw 06/20
+    df3 = df[['u_r_wp','u_r_item_2', 'u_l_item', 'u_l_wp', 'u_logic','u_r_scene','u_l_scene','u_log_condition']]
  
     # st.write('u: ', df2)
     df3 = df3[df3['u_r_wp'].notna()]
@@ -578,7 +402,6 @@ def u_grid(filter):
         # {'field': 'u_logic', 'aggFunc': 'count', 'suppressMovable': True}
         # {'field': 'u_logic', 'headerName':'Value', 'aggFunc': 'firstNotNull', 'suppressMovable': True} #Ha-san 0221: add aggregation function as default
         {'field': 'u_logic_u_condition', 'headerName':'Value','aggFunc': 'firstNotNull', 'suppressMovable': True}, #チョー 05/19
-        {'field': 'u_to_pattern', 'headerName':'TO状況','aggFunc': 'firstNotNull', 'suppressMovable': True}, #Kyaw 06/20
     ]
 
     # df2
@@ -650,7 +473,6 @@ def main():
                 if 'df_display_on_summary' in st.session_state:#サマリーモードでのみ使用するsession_stateは戻る押したら削除する
                     del st.session_state.df_display_on_summary
                     del st.session_state.selected_variation
-                    
             back_to_SPDM_LIST()
     with col8:
         st.session_state.flag_summary=st.toggle('サマリーモード', key='summary_toggle', value=st.session_state.flag_summary_before)
@@ -658,7 +480,6 @@ def main():
         if 'df_display_on_summary' in st.session_state:#サマリーモードでのみ使用するsession_stateは詳細に戻ったら削除する
             del st.session_state.df_display_on_summary
             del st.session_state.selected_variation
-            
 
         with col2:
             if st.button("車両→システム"):
@@ -695,14 +516,12 @@ def main():
 
 
         #必要なSE情報の取得,postgre_get_dateが使えるかな、そもそもdatastuck持ってる？持っていないときもあるのかじゃあ絶対必要だね
-        
         variations = st.session_state['selectoption6']
         
         #variationを選択させるselectboxを設置する 4/4 se_data_stuck でつける列名がバリエーション名からIDに変わったことにより、ここでも名前そのものでなく番号変換が必要になる 8/5
-        #8/6 selected_variationはIDでも名前でもほしい、どちらも変数用意する
+        
         with col7:
-            selected_variation = st.selectbox('', options=variations, key='select_variation')
-            selected_variation_id = st.session_state.prj_info_list[st.session_state.prj_info_list['variation']==selected_variation]['variation_id'].tolist()[0]
+            selected_variation = st.session_state.prj_info_list[st.session_state.prj_info_list['variation']==st.selectbox('', options=variations, key='select_variation')]['variation_id'].tolist()[0]
         if 'selected_variation' not in st.session_state or selected_variation != st.session_state.selected_variation:
             st.session_state.selected_variation = selected_variation
             if 'df_display_on_summary' in st.session_state :
@@ -729,9 +548,8 @@ def main():
                     st.session_state['selectoption5']
                 )
                 
-            # st.session_state.rfl_list = df1
-            st.session_state.rfl_matrix = df1 #telema-kyaw
-        df_rfl_data = st.session_state.rfl_matrix.copy() #telema-kyaw
+            st.session_state.rfl_list = df1
+        df_rfl_data = st.session_state.rfl_list.copy()
         df_rfl_performance_c = df_rfl_data.loc[:, 'c_r_wp']
         df_rfl_performance_s = df_rfl_data.loc[:, 's_r_wp']
         df_rfl_performance = pd.concat([df_rfl_performance_c, df_rfl_performance_s])
@@ -772,11 +590,18 @@ def main():
             df_se_unit  = df_se_data.loc[:, se_unit_col[0]]
             #各バリエーションごとの列を取得
             #山口　全Veriationではなく、ユーザー選択で列を選ばせる
-            se_variation_col = df_se_data.loc[:, df_se_data.columns.str.contains(';z_wp_name_get_str;') & df_se_data.columns.str.contains(str(selected_variation_id), regex=False) ].columns #
-            se_value_col = df_se_data.loc[:, df_se_data.columns.str.contains(';z_request_median;') & df_se_data.columns.str.contains(str(selected_variation_id), regex=False)].columns #山口　regex=Falseにしないと、Variation名に正規表現記号が入ってきたときに正しく判定できない。4/10
+            
+            se_variation_col = df_se_data.loc[:, df_se_data.columns.str.contains(';z_wp_name_get_str;') & df_se_data.columns.str.contains(str(selected_variation), regex=False) ].columns #
+            se_value_col = df_se_data.loc[:, df_se_data.columns.str.contains(';z_request_median;') & df_se_data.columns.str.contains(str(selected_variation), regex=False)].columns #山口　regex=Falseにしないと、Variation名に正規表現記号が入ってきたときに正しく判定できない。4/10
             
             df_se_variation = df_se_data.loc[:, se_variation_col]
             df_se_value = df_se_data.loc[:, se_value_col]
+            # st.write(df_se_data.loc[:, df_se_data.columns.str.contains(selected_variation)])
+            # st.write("G仕様(BAT88)")
+            # st.write(pd.DataFrame(['aaa'], columns=["G仕様(BAT88)"]).columns)
+            # st.write(pd.DataFrame(['aaa'], columns=["G仕様(BAT88)"]).columns.str.contains("G仕様(BAT88)", regex=False)) im mad
+            # st.write(df_se_variation)
+            # st.write(df_se_value)
             df_se_info = pd.concat([df_se_parameter_id, df_se_parent, df_se_child, df_se_unit, df_se_variation, df_se_value], axis=1)
             
             df_se_info.rename(columns={df_se_info.columns[0]:'se_parameter_id', df_se_info.columns[1]:'parameter_name_1', df_se_info.columns[2]:'parameter_name_2', df_se_info.columns[3]:'parameter_unit'}, inplace=True)
@@ -802,40 +627,21 @@ def main():
             df_rfl_info = None
             for i, performance in enumerate(performance_list):
                 #TODO ほんとに全部c_r_wpでいいんだっけ？確認する
-                # df_rfl_by_performance_c = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['c_r_pj_id', 'c_phase_id', 'c_rfl_id','c_r_wp', 'c_related_se_parameter_id', 'c_logic', 'c_l_scene', 'c_flag_to', 'c_to_solving_value', 'c_flag_display_on_summary_logic' ]]
-                # df_rfl_by_performance_s = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['s_r_pj_id', 's_phase_id', 's_rfl_id','c_r_wp', 's_related_se_parameter_id', 's_logic', 's_l_scene', 's_flag_to', 's_to_solving_value', 's_flag_display_on_summary_logic']]
-                # df_rfl_by_performance_u = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','c_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic']]
-                
-                # df_rfl_by_performance_c.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
-                # df_rfl_by_performance_s.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
-                # df_rfl_by_performance_u.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
-                
-                #Kyaw 06/20
-                df_rfl_by_performance_c = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['c_r_pj_id', 'c_phase_id', 'c_rfl_id','c_r_wp', 'c_related_se_parameter_id', 'c_logic', 'c_l_scene', 'c_flag_to', 'c_to_solving_value', 'c_flag_display_on_summary_logic','c_log_condition','c_is_to','c_to_pattern']] #kyaw-rfl
-                df_rfl_by_performance_s = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['s_r_pj_id', 's_phase_id', 's_rfl_id','c_r_wp', 's_related_se_parameter_id', 's_logic', 's_l_scene', 's_flag_to', 's_to_solving_value', 's_flag_display_on_summary_logic','s_log_condition','s_is_to','s_to_pattern']]
-                df_rfl_by_performance_u = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','c_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic','u_log_condition','u_is_to','u_to_pattern']]
-                
-                df_rfl_by_performance_c.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value','log_condition','is_to','to_pattern'] #kyaw-rfl
-                df_rfl_by_performance_s.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value','log_condition','is_to','to_pattern']
-                df_rfl_by_performance_u.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value','log_condition','is_to','to_pattern']
-                
-                
+                df_rfl_by_performance_c = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['c_r_pj_id', 'c_phase_id', 'c_rfl_id','c_r_wp', 'c_related_se_parameter_id', 'c_logic', 'c_l_scene', 'c_flag_to', 'c_to_solving_value', 'c_flag_display_on_summary_logic' ]]
+                df_rfl_by_performance_s = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['s_r_pj_id', 's_phase_id', 's_rfl_id','c_r_wp', 's_related_se_parameter_id', 's_logic', 's_l_scene', 's_flag_to', 's_to_solving_value', 's_flag_display_on_summary_logic']]
+                df_rfl_by_performance_u = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','c_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic']]
+                df_rfl_by_performance_c.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
+                df_rfl_by_performance_s.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
+                df_rfl_by_performance_u.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
                 df_rfl_by_performance = pd.concat([df_rfl_by_performance_c,df_rfl_by_performance_s,df_rfl_by_performance_u])
                 
                 
                 # st.write(len(df_rfl_by_performance_c))
                 if len(df_rfl_by_performance_c)==0:#車両階層のないRFLはこのループに入る
-                    # df_rfl_by_performance_s = df_rfl_data[df_rfl_data['s_r_wp']==performance].loc[:, ['s_r_pj_id', 's_phase_id', 's_rfl_id','s_r_wp', 's_related_se_parameter_id', 's_logic', 's_l_scene', 's_flag_to', 's_to_solving_value', 's_flag_display_on_summary_logic']]
-                    # df_rfl_by_performance_u = df_rfl_data[df_rfl_data['s_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','s_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic']]
-                    # df_rfl_by_performance_s.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
-                    # df_rfl_by_performance_u.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
-                    
-                    #Kyaw 06/20
-                    df_rfl_by_performance_s = df_rfl_data[df_rfl_data['s_r_wp']==performance].loc[:, ['s_r_pj_id', 's_phase_id', 's_rfl_id','s_r_wp', 's_related_se_parameter_id', 's_logic', 's_l_scene', 's_flag_to', 's_to_solving_value', 's_flag_display_on_summary_logic','s_log_condition','s_is_to','s_to_pattern']]
-                    df_rfl_by_performance_u = df_rfl_data[df_rfl_data['s_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','s_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic','u_log_condition','u_is_to','u_to_pattern']]
-                    df_rfl_by_performance_s.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value','log_condition','is_to','to_pattern']
-                    df_rfl_by_performance_u.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value','log_condition','is_to','to_pattern']
-                    
+                    df_rfl_by_performance_s = df_rfl_data[df_rfl_data['s_r_wp']==performance].loc[:, ['s_r_pj_id', 's_phase_id', 's_rfl_id','s_r_wp', 's_related_se_parameter_id', 's_logic', 's_l_scene', 's_flag_to', 's_to_solving_value', 's_flag_display_on_summary_logic']]
+                    df_rfl_by_performance_u = df_rfl_data[df_rfl_data['s_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','s_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic']]
+                    df_rfl_by_performance_s.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
+                    df_rfl_by_performance_u.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
                     df_rfl_by_performance = pd.concat([df_rfl_by_performance_s,df_rfl_by_performance_u])
                     
                 
@@ -892,7 +698,7 @@ def main():
         df_to_summary.drop_duplicates(subset=['se_parameter_id', 'logic_concat'], inplace=True)
         # st.write(df_rfl_data)
         #山口 サマリ専用昨日たちの整列 4/14
-        summary_col1, summary_col2, summary_col3, summary_col4 = st.columns([1,1,1,10])
+        summary_col1, summary_col2, summary_col3 = st.columns([1,1,10])
         #サマリー表示行を編集さセルための機能追加
         with summary_col1:
                 #dia.select_display_on_summary() 山口　ここに置くとAggridに通す前のDFを対象に変更をかけてしまう。ここではフラグを立てるにとどめてグリッド表示後に実行する
@@ -916,8 +722,6 @@ def main():
         
         #st-aggridでspanningできないので、df_to_summaryを直接いじる
         df_to_summary.loc[df_to_summary['parameter_name_1'] == df_to_summary['parameter_name_1'].shift(),'parameter_name_1'] = ''
-
-        df_to_summary = update_summary_df(df_to_summary, performance_list)
 
         #########
         #ステートメントの表示をする
@@ -1025,7 +829,6 @@ def main():
             'rowHeight': 50,
             'headerHeight':50,
             'enableRangeSelection':True,
-            'getRowStyle': summaryTredeOffBGcolor,
 
         }
         #seのvariationごとにcolumnDefs追加
@@ -1037,16 +840,6 @@ def main():
                             }
             
         go_to_summary['columnDefs'].append(se_column_def)
-        #Kyaw 06/20
-        summary_to_pattern = {'headerName':f'TO状況',
-                              'field':'summary_to_pattern', 
-                              'headerClass':'se_to_summary', 
-                              'cellStyle':BGcolorRenderer,
-                              'editable': EditableValue,  
-                              'wrapText': True,
-                              'width':180
-                              }
-        go_to_summary['columnDefs'].append(summary_to_pattern)
         #R性能ごとにcolumnDefs追加
         for performance in performance_list:
             # st.write(performance)
@@ -1055,7 +848,6 @@ def main():
                               'headerClass':'requirements_to_summary', 
                               'cellStyle':BGcolorRenderer,
                               'editable': EditableValue,  
-                              'tooltipField': f'to_pattern_{performance}', #Kyaw 06/20
                               'wrapText': True}
             rfl_flag_to_column_def = {
                               'headerName':'flag_to_' + performance,
@@ -1088,8 +880,8 @@ def main():
             go_to_summary['columnDefs'].append(rfl_to_solving_value_column_def)
 
         #テスト用
-        # df_to_summary['flag_to_動力'] = 1  
-        st.write(df_to_summary)  
+        # df_to_summary['flag_to_動力'] = 1    
+        # st.write(df_to_summary)
         ag_edited = AgGrid(df_to_summary,go_to_summary,
                 custom_css=css_ag,
                 height=1000,
@@ -1126,44 +918,7 @@ def main():
             if df_selecteds is not None:
                 dia.update_rfl_by_to_summary(df_selecteds)
             
-        with summary_col4:
-            if st.button('TO自動判定結果保存'):
-
-                results = []
-
-                for idx, row in df_edited.iterrows():
-                    for perf in performance_list:
-                        flag_col = f'flag_selected_{perf}'
-                        if flag_col in df_edited.columns and row.get(flag_col, False):
-                            cols_for_perf = [f'project_id_{perf}', f'phase_id_{perf}', f'rfl_id_{perf}', 'parameter_name_2',f'logic_{perf}',f'is_to_{perf}', f'to_pattern_{perf}', flag_col,'summary_to_pattern']
-                            cols_for_perf = [c for c in cols_for_perf if c in df_edited.columns]
-
-                            # Extract data
-                            selected_data = row[cols_for_perf].to_dict()
-
-                            # Remove suffix from keys
-                            renamed_data = {}
-                            for k, v in selected_data.items():
-                                # Remove _perf suffix (like _aaa or _燃費電費)
-                                new_key = re.sub(f'_{re.escape(perf)}$', '', k)
-                                renamed_data[new_key] = v
-
-                            # Skip if any key is null
-                            if any(pd.isna(renamed_data.get(k)) for k in ['project_id', 'phase_id', 'rfl_id']):
-                                continue
-
-                            # Add extra info
-                            # renamed_data['row_index'] = idx
-                            renamed_data['performance'] = perf
-
-                            results.append(renamed_data)
-
-                rfl_summary_df_selected = pd.DataFrame(results)
-
-                if not rfl_summary_df_selected.empty:
-                    dia.update_summary_to_result(rfl_summary_df_selected)
-                else:
-                    dia.error_test()    
+            
 
 
 

@@ -83,12 +83,8 @@ class RFLGridConfig:
             },
             'allocation' :{
                 'title' : 'Allocation',
-                'col' : 'l_wp'
-            }, 
-            'log_condition' :{
-                'title' : '等号・不等号',
-                'col' : 'log_condition'
-            },             
+                'col' : 'allocation'
+            },            
         },
         #RFL承認のため　＃チョー　04/14
         'approve_cols' : {
