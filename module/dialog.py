@@ -1923,6 +1923,7 @@ def update_mapgrid_by_name(mode, df_edited, df_editeds, df_edited_z,  map_name, 
         elif mode=='TABLE':
             tablecount = int(df_edited.iloc[1:,1].last_valid_index())
             map_variable_id_X = xname.split("_")[0]
+            map_variable_id_TABLEs = []
             for ti in range(tablecount):
                 map_variable_id_TABLEs.append(tablenames[ti].split("_")[0])
             if len(set(map_variable_id_TABLEs + [map_variable_id_X]))!=len(map_variable_id_TABLEs + [map_variable_id_X]):
