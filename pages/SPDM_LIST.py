@@ -1158,27 +1158,27 @@ def hide_rows_based_on_pages(df_sim, pages):
     return df_sim 
 
 
-def get_runner_status():
-    '''
-    SystemAnalysのステータスを取得する関数
-    '''
-    onedriveDirectory = r"C:\Users\BSN00147\OneDrive - Nissan Motor Corporation\simrequest_variables"
-    status_file_path = os.path.join(onedriveDirectory, 'runner_status.txt')
-    try:
-        with open(status_file_path, 'r') as f:
-            lines = f.readlines()
-            
-            status = lines[0].replace('\n', '')
-            if status==str(0):
-                return 'シミュレーション指示待機中'
-            elif status == str(1):
-                study_id = lines[1].split(',')[3]
-                return 'シミュレーション実行中：'+study_id
-            else:
-                return 'unexpected status'
-
-    except Exception as e:
-        raise e
+# def get_runner_status():
+#     '''
+#     SystemAnalysのステータスを取得する関数
+#     '''
+#     onedriveDirectory = r"C:\Users\BSN00147\OneDrive - Nissan Motor Corporation\simrequest_variables"
+#     status_file_path = os.path.join(onedriveDirectory, 'runner_status.txt')
+#     try:
+#         with open(status_file_path, 'r') as f:
+#             lines = f.readlines()
+#
+#             status = lines[0].replace('\n', '')
+#             if status==str(0):
+#                 return 'シミュレーション指示待機中'
+#             elif status == str(1):
+#                 study_id = lines[1].split(',')[3]
+#                 return 'シミュレーション実行中：'+study_id
+#             else:
+#                 return 'unexpected status'
+#
+#     except Exception as e:
+#         raise e
 
 
 #SEリスト以外のタブを選択すると何も表示されない。　＃チョー　11/01
@@ -1221,8 +1221,8 @@ if int(st.session_state['chosen_id'])  == 3 :
             simcol1, simcol2, simcol3 = st.columns([1,6,2])
             with simcol1:
                 pages = st.radio('',['sim','初期仕様', 'バリエーション表','最終仕様'])#st.session_state.sim_prj_info_list
-            with simcol3:
-                st.write('runner_status:\n' + get_runner_status())
+            # with simcol3:
+            #     st.write('runner_status:\n' + get_runner_status())
             go = gop.create_gridopsim(pages)#山口　pagesによって返すグリッドを切り替える
             def render_aggrid(go):
                 edit=AgGrid(
