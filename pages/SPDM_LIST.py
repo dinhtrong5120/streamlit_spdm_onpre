@@ -13,8 +13,13 @@ from module.PsqlModule import psql_class
 from module.utils import init_session_state
 from config.config import RFLGridConfig
 import streamlit.components.v1 as components
-import module.Jcurb as Jcurb
-import os 
+from db.rfl_repository import RFLRepository as rflq #telema-kyaw
+import os
+#08/22
+from module.excel.excel_hierarchical_export import create_hierarchical_excel_data
+import module.excel.excel_hierarchical_style as hr_styles
+from io import BytesIO
+from module.data_processing import create_rfl_grid_excel_data
 
 
 sql = psql_class()
@@ -70,6 +75,15 @@ if 'rerun_rfl' not in st.session_state:
 if 'summary_rlist_flag' not in st.session_state:
     st.session_state.summary_rlist_flag = False
 
+#チョー 02/26 
+if st.session_state.rerun_rfl:
+    # print("rerun rfl")
+    st.session_state.rerun_rfl = False
+    st.rerun()
+
+#telema-kyaw rfl_update 8/22
+init_session_state('rfl_grid_download_ready')
+
 #チョー #関数追加 #10/2
 #MAPリンクを取得するため、選択されたプロジェクトに応じてプロジェクトを変更する
 def get_map_link(project_name):
@@ -84,8 +98,6 @@ def title_tab_bar():
         stx.TabBarItemData(id=3, title="SIM管理表", description=None),
          # Telema RFL用タブ作成 2025/01/28
         stx.TabBarItemData(id=4, title="RFL", description=None),
-        stx.TabBarItemData(id=5, title="仮_計算用", description=None),
-
         ],default=st.session_state.chosen_id)
     st.session_state.chosen_id = chosen_id
     if _chosen_id!=chosen_id:#山口 タブバー押してもすぐ画面更新されないため強制リロードをかける12/3
@@ -192,7 +204,7 @@ def update_button():
         #         current_selected_rows = df_mold[df_mold[selected_column_name] == True]
         #         # If there are any selected rows, append them to selected_rows
         #         if not current_selected_rows.empty:
-        #             selected_rows = pd.concat([selected_rows, current_selected_rows], ignore_index=True)
+        #             selected_rows = pd.concat([selected_rows, current_selected_rows], ignore_index=True) 
 
         #     # Check for unhashable types and convert them to string (if needed)
         #     # If some columns contain lists or other unhashable types, convert them to strings
@@ -284,11 +296,7 @@ def reload_info():
     elif int(st.session_state.chosen_id)==3 and 'sim_data_stuck' in st.session_state:
         print('sim_update')
         # df1,df2=sql.posgre_get_data_sim(st.session_state['selectoption1'],st.session_state['selectoption4'],st.session_state['selectoption5'], st.session_state['selectoption6'])
-        df1,df2=sql.posgre_get_data_sim(st.session_state['selectoption1'],
-                            st.session_state['selectoption2'],
-                            st.session_state['selectoption3'],
-                            st.session_state['selectoption4'],
-                            st.session_state['selectoption5']) #チョー 03/10 #山口　引数が古かったので1-5を渡すように設定
+        df1,df2=sql.posgre_get_data_sim(st.session_state['selectoption1'],st.session_state['selectoption4'],st.session_state['selectoption5']) #チョー 03/10
         st.session_state.sim_prj_info_list = df1
         st.session_state.sim_data_stuck = df2
     else:
@@ -306,9 +314,9 @@ def condition_button():
         #     dia.choice_sim()  
         # if int(st.session_state['chosen_id'])  == 4:
         #     dia.choice_rfl()
-        
+
         #チョー　共通ダイアログを使う 03/10
-        if int(st.session_state['chosen_id'])  == 1 or int(st.session_state['chosen_id'])  == 5:
+        if int(st.session_state['chosen_id'])  == 1:
             dia.choice_se_bookmark('se_list')
         if int(st.session_state['chosen_id'])  == 2:
             dia.choice_se_bookmark('r_list')
@@ -324,52 +332,81 @@ def login_button():
 
 #MAPボタン表示・処理    #チョー　10/31
 def map_button():
-    '''
-    SEリスト、Sim管理表でMAPボタンが押されたときに動かす関数
-    チェックマークがついたセルの値抽出
-    値でマップ検索
-    DB上にマップが見つかればmapgrid_by_name
-    見つからなければmapgrid
-    '''
+    # #チョー #関数追加 #10/2
+    # if st.button("MAP"):           
+    #     if "prj_info_list" in st.session_state:
+    #         selected_proj = list(set(st.session_state.prj_info_list["z_model_code"]))
+    #         #複数プロジェクトを選択した場合、
+    #         if len(selected_proj) > 1:
+    #             dia.map_multiselected(selected_proj)
+    #         else:
+    #             for item in selected_proj:
+    #                 link_name = get_map_link(item)
+    #                 open_link = getattr(co, link_name, None)
+    #                 if open_link:
+    #                     st.components.v1.html(
+    #                         f"""
+    #                         <script>
+    #                             window.open('{open_link}', '_blank');
+    #                         </script>
+    #                         """,
+    #                         height=0,
+    #                     )
+    #             st.session_state.map_click = True
+    #             reload_button()
+    #     else:
+    #         dia.file_download()
 
-    #山口　マップをグリッド表示するためのやつ `11/13
-    if st.button("MAP"):           
+    #山口　マップフォルダ参照方法を変える 11/1
+    #    if st.button("MAP"):           
+    #        if "se_data_stuck" in st.session_state:
+    #            df_mold = pd.DataFrame(st.session_state.aggrid)
+    #            result = sql.db_update_selected(df_mold, now,username)#選択した項目入手
+    #            for i, row in result.iterrows():
+    #                if row['URL'] is not None:
+    #                    URL = row['URL']
+    #                    if URL:
+    #                        st.components.v1.html(
+    #                            f"""
+    #                            <script>
+    #                                window.open('{URL}','_blank')
+    ###                            </script>
+      #                          """,
+    #                            height=0
+    #                        )
+    #                        #reload_info()
+    #                else:
+    #                    st.error(row['z_prj_number'] + ' ' + row['z_parent_paraitem'] + ' ' + row['z_child_paraitem'] + ' ' + row['z_wp_name_get_str'] + "に紐づくMapURLがありません。")
+    #                    #dia.URL_none(row)
+        #山口　マップをグリッド表示するためのやつ `11/13
+        if st.button("MAP"):           
 
-        
-        if "se_data_stuck" in st.session_state and int(st.session_state.chosen_id)==1 :#山口　chosen_idを条件に追加12/5
-            df_mold = pd.DataFrame(st.session_state.aggrid)
-            result = sql.db_update_selected(df_mold, now,username)#選択した項目入手
             
-            if len(result)==1:#この機能は複数選択で動かすわけにいかない
-                map_name = result['z_request_median'].tolist()[0]
-                df_map_variables = sql.get_map_variables_by_name(map_name)
+            if "se_data_stuck" in st.session_state and int(st.session_state.chosen_id)==1 :#山口　chosen_idを条件に追加12/5
+                df_mold = pd.DataFrame(st.session_state.aggrid)
+                result = sql.db_update_selected(df_mold, now,username)#選択した項目入手
                 
-                project_id=result['project_id'].tolist()[0]
-                phase_id=result['phase_id'].tolist()[0]
-                parameter_id=result['se_parameter_id'].tolist()[0]
-                variation_id=result['variation_id'].tolist()[0]
-                URL = result['URL'].tolist()[0]
-                df_map_variables2 = sql.get_map_variables(project_id, parameter_id, phase_id, variation_id)
-                if df_map_variables is not None:#やりたいのは名前一致するものがなければ新規作成、だけどSEリストはまだデータ移行ができていないため、ない場合は従来のマップグリッドを使用する TODO
-                    dia.mapgrid_by_name(result) 
-                elif URL is not None or len(df_map_variables2)>1:
-                    dia.mapgrid(result)#TODO こいつ実行前に判定機能つけれない？そうすればこっちで該当マップなければNAMEでつけることができるかららくちんちんになる
+                
+                if len(result)==1:#この機能は複数選択で動かすわけにいかない
+                    dia.mapgrid(result)
+                    
                 else:
-                    st.write('completely new map')
-                    dia.mapgrid_by_name(result)
-            else:
                     st.error("MAP表示は1項目選択時のみしか機能しません！！")
-        elif "sim_data_stuck" in st.session_state and int(st.session_state.chosen_id)==3 :#山口　simMap用の追加 12/5
-            df_mold = pd.DataFrame(st.session_state.aggrid)
-            result = sql.db_update_selected(df_mold, now,username)#選択した項目入手
-            
-            if len(result)==1:#この機能は複数選択で動かすわけにいかない
-                map_name = result['value'].tolist()[0]
-                dia.mapgrid_by_name(result) #名前参照用に変更する
+                    st.write(result)
+            elif "sim_data_stuck" in st.session_state and int(st.session_state.chosen_id)==3 :#山口　simMap用の追加 12/5
+                df_mold = pd.DataFrame(st.session_state.aggrid)
+                result = sql.db_update_selected(df_mold, now,username)#選択した項目入手
+                
+                
+                if len(result)==1:#この機能は複数選択で動かすわけにいかない
+                    dia.mapgrid_by_name(result)#名前参照用に変更する
+                    #dia.mapgrid(result)
+                else:
+                    st.write(result)
+                    st.error("MAP表示は1項目選択時のみしか機能しません！！")
+                    st.write(result)
             else:
-                st.error("MAP表示は1項目選択時のみしか機能しません！！")
-        else:
-            st.error("unexpected map func execution")
+                st.error("uhhhh..")
 
 #山口　時系列表示機能用ボタン 1/29
 def timeseries_button():
@@ -394,15 +431,19 @@ def compare_button():
         if st.button("戻る"):
             st.session_state['compare_click'] = False
             st.rerun()
-
-
-#Kyaw 10/16 PRJ新規作成 button
+#Kyaw 10/16 CreateNewSEProject button
 def create_new_button():
     if st.button('PRJ新規作成'):
         if int(st.session_state['chosen_id']) == 1:
             dia.create_new_se_prj()
         if int(st.session_state['chosen_id']) == 2:
             dia.create_new_r_and_rfl_prj()
+        if int(st.session_state['chosen_id']) == 4:
+            st.write('rfl create new button click!')
+            # dia.create_new_rfl_prj()
+        if int(st.session_state['chosen_id']) == 3:
+            st.write('sim create new button click!')
+            # dia.create_new_sim_prj()
 
 def create_button():#山口　チョーさんのものにchosen_id分岐を追加 12/5
     if int(st.session_state.chosen_id)==1:
@@ -427,7 +468,6 @@ def sim_button():#山口　simボタン 12/6
         if 'sim_data_stuck' in st.session_state:
            dia.sim()
 
-
 def dashboard_button():#山口　simボタン 12/6
     if st.button('結果'):
         if 'sim_data_stuck' in st.session_state:
@@ -450,7 +490,7 @@ if 'fix_sim_study_list' in st.session_state and st.session_state.fix_sim_study_l
         dia.fixed_dia_sim()
         st.session_state.fix_sim_study_list = False
 
-# Ha-san added 0214:
+# Ha-san added 0214: 
 def get_session_choices(choice_number):
     searching_input_keys = ['architecture_name']
     searching_input_values = []
@@ -544,7 +584,7 @@ def r_statement_button():
     if st.button('ステートメント記入'):
         dia.insert_r_statement()
 
-#Kyaw 07/22 モード保存機能追加 #10/29 merge#5
+#Kyaw 07/22
 def edit_column_width_button():
     if st.button('モード保存'):
         dia.confirm_resized_column_width()  
@@ -579,7 +619,7 @@ if st.session_state.button_edit_state and not st.session_state.login_begin:
         with col2:
             condition_button()  #条件ボタン表示関数を呼び出す
         with col3:
-            create_new_button()    #PRJ新規作成ボタンの関数を呼び出す #11/25
+            create_new_button()    #新規作成ボタンの関数を呼び出す #11/25
         with col4:
             update_button()     #編集ボタン表示関数を呼び出す        
         with col5:
@@ -589,10 +629,10 @@ if st.session_state.button_edit_state and not st.session_state.login_begin:
 
     elif int(st.session_state['chosen_id']) == 2 and "r_prj_info_list" in st.session_state:# 山口 Rリスト用表示ボタン 1/29
 
-        col_def = [9,1.2,1.2,5,1,1.3,1.6] #チョー 04/24 #10/29 merge#5
+        col_def = [9,1.2,1.2,5,1,1.3,1.6] #チョー 04/24
         if st.session_state.summary_rlist_flag is True:
-            col_def = [9,1,2,1,0.001,0.001,0.001] #チョー 選択リストなしで表示する 04/24 #10/29 merge#5
-        col1, col2, col3, col4,col5,col6,col7 = st.columns(col_def)
+            col_def = [9,1,2,1,0.001,0.001,0.001] #チョー 選択リストなしで表示する 04/24
+        col1, col2, col3, col4,col5,col6, col7 = st.columns(col_def)
         with col1:
             title_tab_bar()     #タブメニュー表示関数を呼び出す
         with col2:
@@ -623,37 +663,39 @@ if st.session_state.button_edit_state and not st.session_state.login_begin:
                 r_statement_button() 
 
     elif int(st.session_state['chosen_id']) == 3 and "sim_prj_info_list" in st.session_state:# 山口　sim実行用ボタン追加　12/6
-        col1, col2, col3, col4, col5, col6, col7, col8, col9, col10 = st.columns([7,1,1,1,1,1,1,1,1,1])#山口　列増やした12/5 また列増やした1/29 またまた列増やした2/6
+        col1, col2, col3, col4, col5, col6, col7, col8, col9, col10 = st.columns([8,1,1,1,1,1,1,1,1,1])#山口　列増やした12/5 また列増やした1/29 またまた列増やした2/6
         with col1:
             title_tab_bar()     #タブメニュー表示関数を呼び出す  
         with col2:
             condition_button()  #条件ボタン表示関数を呼び出す
         with col3:
-            update_button()     #編集ボタン表示関数を呼び出す
+            create_new_button()    #新規作成ボタンの関数を呼び出す 
         with col4:
-            map_button()        #MAPボタン表示関数を呼び出す
+            update_button()     #編集ボタン表示関数を呼び出す
         with col5:
-            create_button()     #山口　新規Sim作成ボタン 12/5
+            map_button()        #MAPボタン表示関数を呼び出す
         with col6:
-            sim_button()
+            create_button()     #山口　新規Sim作成ボタン 12/5
         with col7:
-            dashboard_button() # 山口　ダッシュボード表示ボタン12/18
+            sim_button()
         with col8:
+            dashboard_button() # 山口　ダッシュボード表示ボタン12/18
+        with col9:
            send_to_RFL_button() #山口　RFL転記用ボタン2/6
         # with col9:
         #     pass #山口　シナリオのR比較するためreserve
-        with col9:
-            fixed_button() #02/10 チョー　確定ボタン処理を呼び出す
         with col10:
-            reload_button()
+            fixed_button() #02/10 チョー　確定ボタン処理を呼び出す
     else:
         col1, col2, col3 = st.columns([10,1,1.5])
         with col1:
             title_tab_bar()     #タブメニュー表示関数を呼び出す
         # with col:
         #     condition_button()  #条件ボタン表示関数を呼び出す
-        with col3:
+        with col2:
             condition_button()      #条件ボタン表示関数を呼び出す
+        with col3:
+            create_new_button()    #新規作成ボタンの関数を呼び出す 
 else: #チョー 追加 03/10
     col1, col2, col3, col4, col5 = st.columns([10,1,1,1,1])
     # with col1:
@@ -753,20 +795,21 @@ def display_r_summary():
         # st.write('db df1: ', r_df1)
         # st.write('db df2: ', r_df2)
 
-        if not r_df1.empty: #10/29 merge#5
+        if not r_df1.empty:
             #ｒステートメントを取得する　＃チョー　04/16
             r_statement_df = sql.get_r_statement(list(set(r_df1['project_id'])),list(set(r_df1['phase_id'])),'R')
             # r_statement_df = sql.get_r_statement(list(set(df1['project_id'])),list(set(df1['phase_id'])),'R')
             st.session_state.r_statement_df = r_statement_df
 
         #10/20 when all judge columns are blank, return False
-        if r_df2.empty: #10/29 merge#5
+        if r_df2.empty:
             st.session_state.summary_rlist = pd.DataFrame()
 
             # st.session_state.summary_rlist = None
             # st.session_state.r_sum_reload_flag = False
             return
-
+        
+        
         # List of fixed parts of the column names
         get_column_from_rlist = [
             'r_parameter_id',
@@ -787,7 +830,8 @@ def display_r_summary():
         df1 = r_df2[get_column_from_rlist]
 
         # #ｒステートメントを取得する　＃チョー　04/16
-        # r_statement_df = sql.get_r_statement(list(set(df1['project_id'])),list(set(df1['phase_id'])),'R')
+        # r_statement_df = sql.get_r_statement(list(set(r_df1['project_id'])),list(set(r_df1['phase_id'])),'R')
+        # # r_statement_df = sql.get_r_statement(list(set(df1['project_id'])),list(set(df1['phase_id'])),'R')
         # st.session_state.r_statement_df = r_statement_df
 
         r_parameter_id_column = f'r_parameter_id'
@@ -882,9 +926,9 @@ def display_r_summary():
 
         # st.session_state.aggrid = render_aggrid(go)
 
-
-#Kyaw 07/23 #Check the columns that have resized or not! #10/29 merge#5
+#Kyaw 07/23 #Check the columns that have resized or not!
 def resized_column_width(edit):
+
     #Get current column state
     column_state = edit.grid_response.get("columnsState")
     # st.write('column state: ',column_state)
@@ -912,7 +956,7 @@ def resized_column_width(edit):
 
         #Store changed info and show    
         if changed_columns:
-            # st.warning("Changed column widths:")
+            # st.warning("🛠 Changed column widths:")
             # st.json(changed_columns)
             st.session_state.changed_column_widths = changed_columns
         else:
@@ -921,7 +965,6 @@ def resized_column_width(edit):
     else:
         # st.info("Resize some columns to track changes.")
         print('Resize some columns to track changes.')
-
 
 if 'create_new_prj_success' not in st.session_state:
     st.session_state.create_new_prj_success = False
@@ -958,9 +1001,6 @@ if int(st.session_state['chosen_id']) == 1:
    
         # if 'prj_info_list' not in st.session_state:
         #     st.session_state.prj_info_list = []
-
-        # info_df = pd.DataFrame(st.session_state.prj_info)
-        # placeholder = st.empty()
         # ###### パラメータの取得 ######
         # index_list = ['z_parent_paraitem', 'z_child_paraitem', 'z_unit']
         # if 'se_data_stuck' not in st.session_state or info_df['z_number'].tolist() != st.session_state.prj_info_list or st.session_state.update_flg == True:
@@ -983,8 +1023,8 @@ if int(st.session_state['chosen_id']) == 1:
         #     apply(lambda x: [val for val in x if pd.notnull(val)], axis=1)
         # st.session_state.se_data_stuck["param"]=srs
         # st.session_state.se_data_stuck = st.session_state.se_data_stuck.sort_values(by=para_key)
-        # st.session_state.se_data_stuck#　山口　デバック用
-        # st.session_state.prj_info_list
+        st.write('se data stuck:',st.session_state.se_data_stuck)
+        st.write('prj info list:',st.session_state.prj_info_list)
   
         if st.session_state['compare_click'] is True:
             st.info("値を変更する場合は「戻る」ボタンを押してください。")
@@ -1051,6 +1091,12 @@ if int(st.session_state['chosen_id']) == 2:
         # st.write('THIS IS R LIST')
         # st.session_state.create_click = False
 
+        # st.write('total selected rlist prj: ', st.session_state.total_rlist_prj)
+        # # st.write('total selected rlist: ', st.session_state.df_selects)
+        st.write('rlist prj info list: ', st.session_state.r_prj_info_list)
+        st.write('rlist data stuck: ', st.session_state.rlist_data_stuck)
+        
+
         go = gop.create_gridop_rlist()
         def render_aggrid(go):
             edit=AgGrid(
@@ -1063,7 +1109,7 @@ if int(st.session_state['chosen_id']) == 2:
                 enable_quicksearch=True,
                 height=1000,
                 tree_data=True,
-                update_mode="GRID_CHANGED" #Kyaw 07/23 To get the resized columns' value when its changed #10/29 merge#5
+                update_mode="GRID_CHANGED" #Kyaw 07/23 To get the resized columns' value when its changed
             )
             resized_column_width(edit) #Kyaw 07/23 Call the function
             return edit['data']
@@ -1141,7 +1187,7 @@ def hide_rows_based_on_pages(df_sim, pages):
 
     if pages=='バリエーション表':
         senario_id_to_show = [
-            400, 403, 410,
+            410,
             600,602,
             10001,
             20046,20048,
@@ -1155,30 +1201,9 @@ def hide_rows_based_on_pages(df_sim, pages):
             
         ]
         return df_sim[df_sim[id_col].isin(senario_id_to_show)]
-    return df_sim 
+    return df_sim
 
-
-# def get_runner_status():
-#     '''
-#     SystemAnalysのステータスを取得する関数
-#     '''
-#     onedriveDirectory = r"C:\Users\BSN00147\OneDrive - Nissan Motor Corporation\simrequest_variables"
-#     status_file_path = os.path.join(onedriveDirectory, 'runner_status.txt')
-#     try:
-#         with open(status_file_path, 'r') as f:
-#             lines = f.readlines()
-#
-#             status = lines[0].replace('\n', '')
-#             if status==str(0):
-#                 return 'シミュレーション指示待機中'
-#             elif status == str(1):
-#                 study_id = lines[1].split(',')[3]
-#                 return 'シミュレーション実行中：'+study_id
-#             else:
-#                 return 'unexpected status'
-#
-#     except Exception as e:
-#         raise e
+    
 
 
 #SEリスト以外のタブを選択すると何も表示されない。　＃チョー　11/01
@@ -1194,7 +1219,6 @@ if int(st.session_state['chosen_id'])  == 3 :
     is_re_render_sim = False
     # ==========
     if 'sim_data_stuck' not in st.session_state or st.session_state.dialog_state:
-        st.write('no sim_data_stuck in session_state')
         # Ha-san added 0214
         if is_enough_sim_input:
             try:
@@ -1204,7 +1228,7 @@ if int(st.session_state['chosen_id'])  == 3 :
                 is_re_render_sim = True
                 st.rerun() #チョー 03/10
             except Exception as e:
-                raise e #Rリストのロードが最初の一回目でできない件、Try内でエラーが起きているという仮説もと、raiseさせてみると、特にException表示もなくロードされた、正直意味わからない 5/10 山口
+                raise e #Rリストと同様に、raiseさせると最初の一回でロードできるようになる　???? 山口 6/7
                 is_re_render_sim = False
         elif not st.session_state.login_begin: #チョー 03/10
             st.error(f'PRJを選択してください。')
@@ -1213,17 +1237,16 @@ if int(st.session_state['chosen_id'])  == 3 :
         is_re_render_sim = True
         # ==========
     if is_re_render_sim and not st.session_state.login_begin: #チョー 03/10
-        #st.session_state.sim_prj_info_list
+        # st.write('sim_data_stuck: ', st.session_state.sim_data_stuck)
+        # st.write('sim prj info list:', st.session_state.sim_prj_info_list)
+        #山口　simリストのページ分け
+
+        pages = st.radio('',['sim','初期仕様', 'バリエーション表','最終仕様'])#st.session_state.sim_prj_info_list
+
         if len(st.session_state.sim_prj_info_list)==0:
              st.error('選択されたプロジェクトのスタディは一つもありません。上記「新規」ボタンから作成できます。')
         else:
-            #山口　simリストのページ分け
-            simcol1, simcol2, simcol3 = st.columns([1,6,2])
-            with simcol1:
-                pages = st.radio('',['sim','初期仕様', 'バリエーション表','最終仕様'])#st.session_state.sim_prj_info_list
-            # with simcol3:
-            #     st.write('runner_status:\n' + get_runner_status())
-            go = gop.create_gridopsim(pages)#山口　pagesによって返すグリッドを切り替える
+            go = gop.create_gridopsim()
             def render_aggrid(go):
                 edit=AgGrid(
                     hide_rows_based_on_pages(st.session_state.sim_data_stuck, pages),
@@ -1233,13 +1256,12 @@ if int(st.session_state['chosen_id'])  == 3 :
                     reload_data=False,
                     theme="alpine",
                     enable_quicksearch=True,
-                    height=1500,
+                    height=800,
                     tree_data=True,
                 )
                 return edit['data']
             #go
             st.session_state.aggrid = render_aggrid(go)
-            st.write(st.session_state.sim_data_stuck)
             if "update_chk_conf" in  st.session_state:
                 if st.session_state.update_chk_conf is not None:
                     st.session_state.update_chk_conf #デバック用　山口
@@ -1348,67 +1370,186 @@ def rfl_tree_button():
         dia.choice_rfl()
 # -----Telema-----
 
+#telema-kyaw start
+def make_update_button(i):
+    if st.button("反映",type='secondary',key=f'update_btn{i}') :
+        dia.choice_rfl()
+
+def make_rfl_edit_on_button(i):
+    if st.button('編集',type='secondary',key=f'edit_btn{i}'):
+        dia.on_rfl_edit()
+
+def make_rfl_edit_off_button(i):
+    if st.button('編集中',type='primary',key=f'editing_btn{i}'):
+        dia.off_rfl_edit()
+
+def make_rfl_compare_button(i):
+    if st.button("比較",key=f'compare_btn{i}') :
+        dia.compare_rfl()
+
+def make_rfl_tree_button(i):
+    if st.button("ツリー",key=f'tree_btn{i}') :
+        st.session_state.tree_view = True
+        st.rerun()
+
+# -----Telema-----
+# RFLプルダウン更新
+# Created: 2025/02/18
+# 一旦単独選択の実装とする
+def make_rfl_refresh_button(disable):
+    """メタ情報変更更新ボタン
+
+    Args:
+        key_no (_type_): for 文で生成するナンバー
+    """
+    if st.button("更新",key=f'refresh_btn',disabled=disable):
+        pj_code = st.session_state.selectoption1
+        phase = st.session_state.selected_meta['phase']
+        hierarchy_list = st.session_state.selected_meta['hierarchy']
+        wp_list = st.session_state.selected_meta['wp']
+        print(hierarchy_list)
+        st.session_state['selectoption5'] = phase
+        st.session_state['hierarchy'] = hierarchy_list
+        st.session_state['selected_hr'] = hierarchy_list #telema-kyaw feedback
+        st.session_state['wp'] = wp_list
+
+        df=rflq.posgre_get_rfl_tlm(
+            st.session_state['selectoption1'],
+            st.session_state['selectoption2'],
+            st.session_state['selectoption3'],
+            st.session_state['selectoption4'],
+            st.session_state['selectoption5'],
+            st.session_state['hierarchy'],
+            st.session_state['wp'],
+        )
+        st.session_state.rfl_list = df
+
+        rfl_all_info=rflq.posgre_get_rfl(
+            st.session_state['selectoption1'],
+            st.session_state['selectoption2'],
+            st.session_state['selectoption3'],
+            st.session_state['selectoption4'],
+            st.session_state['selectoption5']
+        )
+        st.session_state.rfl_matrix = rfl_all_info
+
+        st.rerun()
+# -----Telema-----
+#telema-kyaw end
+
+#telema-kyaw rfl_update 8/22
+def make_rfl_download_button(key_no):
+    """階層繋がりグリッドダウンロードボタン
+
+    Args:
+        key_no (string): ユニークキー
+    """
+    init_session_state('rfl_excel_data')
+    if not st.session_state.rfl_grid_download_ready:
+        if st.button('ダウンロードデータ作成'):
+            with st.spinner("データを準備中です"):
+                excel_data = create_rfl_grid_excel_data()
+                st.session_state.rfl_excel_data = excel_data
+                st.session_state.rfl_grid_download_ready = True
+                st.rerun()
+    else:
+        with st.container():
+            clicked = st.download_button(
+                label="ダウンロード",
+                data=st.session_state.rfl_excel_data,
+                file_name=f"RFL_XXXX_{st.session_state.wp[0]}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key=f'download_btn{key_no+1}')
+            msg = st.empty()
+            msg.success('ダウンロードが可能になりました。')
+            if clicked:
+                st.session_state.rfl_grid_download_ready = False
+                st.rerun() #Kyaw 10/07
+
+#kyaw-tree
+init_session_state('tree_view')
+if int(st.session_state['chosen_id']) == 4:
+    if st.session_state.tree_view == True:
+        init_session_state('detail_flag')
+        st.switch_page('pages/rfl_tree_page.py')
+
 def rfl_matrix_button(): # 山口　マトリックス表示機能　必要な変数をsession_stateに格納しページ遷移 2/13
     if st.button("T/O"):
         st.switch_page("pages/RFL_matrix.py")
 
 def rfl_update_approval():
     if st.button('承認/取り消し'):
+        # columns_to_check = [
+        #     'c_sender_selected', 's_sender_selected', 'u_sender_selected',
+        #     'c_receiver_selected', 's_receiver_selected', 'u_receiver_selected'
+        # ]
+        # hierarchy = st.session_state.selected_hr
+        hierarchy = st.session_state.tmp_hr
+        
+        if hierarchy == '車両': prefix='c_'
+        if hierarchy == 'システム': prefix='s_'
+        if hierarchy == 'ユニット': prefix='u_'
         columns_to_check = [
-            'c_sender_selected', 's_sender_selected', 'u_sender_selected',
-            'c_receiver_selected', 's_receiver_selected', 'u_receiver_selected'
+            f'{prefix}sender_selected', f'{prefix}receiver_selected'
         ]
-
         # Filter items from session_state that are DataFrames and match the prefix
         filtered_items = {
             key: value for key, value in st.session_state.items()
             if key.startswith('rfl_pj_response_') and isinstance(value, pd.DataFrame)
         }
-
         # Keep only rows with at least one True in the columns_to_check
+        print(filtered_items.items())
         valid_items = {}
         for key, df in filtered_items.items():
             if all(col in df.columns for col in columns_to_check):
                 mask = df[columns_to_check].any(axis=1)
+                print("mask")
+                print(mask)
                 filtered_df = df[mask]
                 if not filtered_df.empty:
                     valid_items[key] = filtered_df
 
-        # Define the selection columns with just the 'c', 's', 'u' prefixes
-        selection_columns = ['c', 's', 'u']
+        # Define the selection columns with just the 'c', 's', 'u' `prefixes`
+        selection_columns = [prefix]
         # Now sort the valid items by their key
         sorted_items = sorted(valid_items.items(), key=lambda x: x[0])
         output_rows = []
         sender_or_receiver = ''
-        
+
+        print("vaild_items")
+        print(valid_items)
+
+        print("sorted_items")
+        print(sorted_items)
+
         if sorted_items:
             for key, df in sorted_items:
                 for _, row in df.iterrows():
                     for prefix in selection_columns:
-                        if row[f'{prefix}_sender_selected'] and row[f'{prefix}_receiver_selected']:
+                        if row[f'{prefix}sender_selected'] and row[f'{prefix}receiver_selected']:
                             print('first:')
                             return dia.approve_sender_receiver_error('selected_both')
                         # Dynamically check if any of the selected flags are True
-                        if row[f'{prefix}_sender_selected'] or row[f'{prefix}_receiver_selected']:
+                        if row[f'{prefix}sender_selected'] or row[f'{prefix}receiver_selected']:
                             
-                            if row[f'{prefix}_sender_selected']:
+                            if row[f'{prefix}sender_selected']:
                                 sender_or_receiver = 'sender'
-                            elif row[f'{prefix}_receiver_selected']:
+                            elif row[f'{prefix}receiver_selected']:
                                 sender_or_receiver = 'receiver'
 
                             # Check if prj_id, rfl_id, and phase_id are not None
-                            prj_id = row[f'{prefix}_r_pj_id']
-                            rfl_id = row[f'{prefix}_rfl_id']
-                            phase_id = row[f'{prefix}_phase_id']
+                            prj_id = row[f'{prefix}r_pj_id']
+                            rfl_id = row[f'{prefix}rfl_id']
+                            phase_id = row[f'{prefix}phase_id']
                             
 
                             if prj_id is not None and rfl_id is not None and phase_id is not None:
-                                judge_value = row[f'{prefix}_{sender_or_receiver}_judge']
+                                judge_value = row[f'{prefix}{sender_or_receiver}_judge']
                                 if judge_value is None:
                                     judge_value = '承認済み'
-                                    name_value = row[f'{prefix}_{sender_or_receiver}_name']
-                                    date_value = row[f'{prefix}_{sender_or_receiver}_date']
-                                    comment_value = row[f'{prefix}_{sender_or_receiver}_comment']
+                                    name_value = row[f'{prefix}{sender_or_receiver}_name']
+                                    date_value = row[f'{prefix}{sender_or_receiver}_date']
+                                    comment_value = row[f'{prefix}{sender_or_receiver}_comment']
                                 elif judge_value == '承認済み':
                                     judge_value = None
                                     name_value = None
@@ -1419,16 +1560,16 @@ def rfl_update_approval():
                                     'rfl_id': int(rfl_id),
                                     'phase_id': int(phase_id),
                                     'project_code': row['project_code'],
-                                    'r_wp': row[f'{prefix}_r_wp'],
-                                    f'{sender_or_receiver}_r_item': row[f'{prefix}_r_item'],
-                                    f'{sender_or_receiver}_req': row[f'{prefix}_req'],
-                                    f'{sender_or_receiver}_l_item': row[f'{prefix}_l_item'],
-                                    f'{sender_or_receiver}_logic': row[f'{prefix}_logic'],
+                                    'r_wp': row[f'{prefix}r_wp'],
+                                    f'{sender_or_receiver}_r_item': row[f'{prefix}r_item'],
+                                    f'{sender_or_receiver}_req': row[f'{prefix}req'],
+                                    f'{sender_or_receiver}_l_item': row[f'{prefix}l_item'],
+                                    f'{sender_or_receiver}_logic': row[f'{prefix}logic'],
                                     f'{sender_or_receiver}_judge': judge_value,
                                     f'{sender_or_receiver}_name': name_value,
                                     f'{sender_or_receiver}_date': date_value,
                                     f'{sender_or_receiver}_comment': comment_value,
-                                    f'{sender_or_receiver}_selected': row[f'{prefix}_{sender_or_receiver}_selected'],
+                                    f'{sender_or_receiver}_selected': row[f'{prefix}{sender_or_receiver}_selected'],
                                 })
 
             final_df = pd.DataFrame(output_rows)
@@ -1494,37 +1635,138 @@ def summarize_group(gp_df, identifier):
         "group_performance": identifier,
         "gp_df_total": total,
     }
-    if identifier in ['OBD','排気','高電圧','EMC','エバポ','低周波','燃費電費']:
-    # if identifier == 'OBD' or identifier == '排気' or identifier == '高電圧' or identifier == 'EMC' or identifier == 'エバポ' or identifier == '高周波':
-        # Compute count and percentage for each judge column 
-        for field in fields: 
-            header = field.split('_')[0]
-            # rfl_id_col = header + '_rfl_id'
-            # total = len(gp_df[rfl_id_col].dropna())  
-            count = count_non_empty(gp_df[field])
-            summary[f"{field}_count"] = f"{total}/{total}"
-            prefix = field.rsplit('_judge', 1)[0]
-            summary[f"{prefix}_percentage"] = f"100.0%"
-    elif identifier in ['高周波','運転性','4WD','燃費電費']:
-        for field in fields: 
-            header = field.split('_')[0]
-            rfl_id_col = header + '_rfl_id'
-            total = len(gp_df[rfl_id_col].dropna())  
-            count = count_non_empty(gp_df[field])
-            summary[f"{field}_count"] = f"{total}/{total}"
-            prefix = field.rsplit('_judge', 1)[0]
-            summary[f"{prefix}_percentage"] = f"100.0%"
-    else:
-        for field in fields: 
-            header = field.split('_')[0]
-            rfl_id_col = header + '_rfl_id'
-            total = len(gp_df[rfl_id_col].dropna())  
-            
-            count = count_non_empty(gp_df[field])
-            summary[f"{field}_count"] = f"{count}/{total}"
-            prefix = field.rsplit('_judge', 1)[0]
-            summary[f"{prefix}_percentage"] = f"{calculate_percent(count, total)}%"
+    # if identifier in ['OBD','排気','高電圧','EMC','エバポ','低周波','燃費電費']:
+    # # if identifier == 'OBD' or identifier == '排気' or identifier == '高電圧' or identifier == 'EMC' or identifier == 'エバポ' or identifier == '高周波':
+    #     # Compute count and percentage for each judge column 
+    #     for field in fields: 
+    #         header = field.split('_')[0]
+    #         # rfl_id_col = header + '_rfl_id'
+    #         # total = len(gp_df[rfl_id_col].dropna())  
+    #         count = count_non_empty(gp_df[field])
+    #         summary[f"{field}_count"] = f"{total}/{total}"
+    #         prefix = field.rsplit('_judge', 1)[0]
+    #         summary[f"{prefix}_percentage"] = f"100.0%"
+    # elif identifier in ['高周波','運転性','4WD','燃費電費']:
+    #     for field in fields: 
+    #         header = field.split('_')[0]
+    #         rfl_id_col = header + '_rfl_id'
+    #         total = len(gp_df[rfl_id_col].dropna())  
+    #         count = count_non_empty(gp_df[field])
+    #         summary[f"{field}_count"] = f"{total}/{total}"
+    #         prefix = field.rsplit('_judge', 1)[0]
+    #         summary[f"{prefix}_percentage"] = f"100.0%"
+    # else:
+    for field in fields: 
+        header = field.split('_')[0]
+        rfl_id_col = header + '_rfl_id'
+        total = len(gp_df[rfl_id_col].dropna())  
+        
+        count = count_non_empty(gp_df[field])
+        summary[f"{field}_count"] = f"{count}/{total}"
+        prefix = field.rsplit('_judge', 1)[0]
+        summary[f"{prefix}_percentage"] = f"{calculate_percent(count, total)}%"
     return summary
+
+#telema-kyaw
+def rfl_approval_summary(base_df_summary):
+    # base_df_summary =base_df_summary.sort_values(by=['c_index','s_index','u_index'])
+    base_df_summary = base_df_summary.sort_values(by=["project_code", "c_r_wp_summary_index"])
+    #山口　グルーピング前に、全RFLを新規追加したIndex列で並び変える 4/18
+    base_df_summary =base_df_summary.sort_values(by=['c_index','s_index','u_index'])
+
+    #05/12
+    # Separate rows
+    base_df_summary_c = base_df_summary[base_df_summary["c_r_wp_summary_index"].notna()].copy()
+    base_df_summary_s = base_df_summary[base_df_summary["c_r_wp_summary_index"].isna()].copy()
+
+    # Create a unified sort key column using available index
+    base_df_summary_c["sort_index"] = base_df_summary_c["c_r_wp_summary_index"]
+    base_df_summary_s["sort_index"] = base_df_summary_s["s_r_wp_summary_index"]
+
+    # Combine both
+    combined_df = pd.concat([base_df_summary_c, base_df_summary_s], ignore_index=True)
+
+    # Sort by project_code first, then unified index
+    # combined_df = combined_df.sort_values(by=["sort_index"]).drop(columns=["sort_index"])
+    combined_df = combined_df.sort_values(by=["sort_index",'c_index','s_index','u_index'])
+    base_df_summary = combined_df
+    # Optional: display result
+    # st.write("Final sorted DataFrame:", base_df_summary)
+
+    for col in base_df_summary.columns:#ここなんでループしているのかわからない
+        group_df_summary = base_df_summary.groupby(['sort_index'])
+
+    #チョー　05/09
+    summary_data = []
+    for key, gp_df in group_df_summary:
+        row = gp_df.iloc[0]
+        group_identifier = extract_group_identifier(row)
+        summary_data.append(summarize_group(gp_df, group_identifier))
+
+    # Convert to DataFrame
+    summary_df = pd.DataFrame(summary_data)
+    return summary_df
+
+#telema-kyaw feedback
+def selected_hr_wp():
+    
+    cols2 = st.columns([1,1,1,1])
+    with st.container():
+
+        selected_meta = {
+            'hierarchy' : '',
+            'phase' : '',
+            'wp' : ''
+        }
+
+        # 選択肢は一つまで対応
+
+        with cols2[0]:
+            selected_phase = st.multiselect(
+                'Phase',
+                st.session_state.other_phase,
+                placeholder='Phaseを指定',
+                key = f'phase_select'
+            )
+            selected_meta['phase'] = selected_phase
+
+        with cols2[1]:
+            hierarchy_list = ['']
+            if selected_meta['phase']:
+                hierarchy_list = rflq.get_hierarchy(st.session_state.selectoption1,selected_meta['phase'])
+            selected_hierarchy = st.multiselect(
+                '階層',
+                hierarchy_list,
+                disabled = not selected_meta['phase'],
+                placeholder='階層を指定' if selected_meta['phase'] else 'Phaseを先に指定してください',
+                key = f'hierarchy_select'
+
+            )
+            selected_meta['hierarchy'] = selected_hierarchy
+
+        with cols2[2]:
+            wp_list = ['']
+            if selected_meta['phase'] and selected_meta['hierarchy']:
+                wp_list = rflq.get_wp(st.session_state.selectoption1,selected_meta['phase'],selected_meta['hierarchy'])
+
+            selected_wp = st.multiselect(
+                '領域',
+                wp_list,
+                disabled = not selected_meta['hierarchy'],
+                placeholder='領域を指定' if selected_meta['hierarchy'] else '階層を先に指定してください',
+                key = f'wp_select'
+            )
+            selected_meta['wp'] = selected_wp
+
+        st.session_state.selected_meta = selected_meta
+
+        with cols2[3]:
+            disable = True
+            if selected_wp:
+                disable = False
+            st.markdown("<div style='height: 1.7em;'></div>",unsafe_allow_html=True)
+            make_rfl_refresh_button(disable)
+
 
 
 # -----Telema-----
@@ -1537,25 +1779,66 @@ if int(st.session_state['chosen_id']) == 4:
     st.session_state.rerun_rfl = False
     # ==========
 
-    if 'rfl_list' not in st.session_state or st.session_state.rfl_list.empty or st.session_state.dialog_state:
+    cols_btn = st.columns([5,1,1,1,2,1,1,2]) #telema-kyaw rfl_update 8/22
+
+    if 'rfl_matrix' not in st.session_state or len(st.session_state.rfl_matrix)<1 or st.session_state.dialog_state:
+        rfl_all_info = sql.posgre_get_rfl(*searching_input_rfl_values[1:])
+        st.session_state.rfl_matrix = rfl_all_info
+
+    if 'rfl_matrix' in st.session_state and not st.session_state.rfl_matrix.empty:
+        base_df_summary = st.session_state.rfl_matrix
+        summary_df = rfl_approval_summary(base_df_summary)
+        # Display in Streamlit
+        # st.write('summary_df: ',summary_df)
+        with st.expander("承認率状況​"):
+            # st.write('summary_df: ',summary_df)
+            go = gop.update_rfl_dashboard_grid()
+            AgGrid(
+                summary_df,
+                custom_css=css_ag,
+                gridOptions=go,
+                reload_data=False,
+                height=650,
+            )
+        selected_hr_wp()
+
+    if 'rfl_list' not in st.session_state or len(st.session_state.rfl_list)<1 or st.session_state.dialog_state:
         # Ha-san added 0214
         if is_enough_rfl_input:
-            try:
-                df1_rfl = sql.posgre_get_rfl(*searching_input_rfl_values[1:])
-                if df1_rfl is not None and not df1_rfl.empty: #チョー 03/10
-                    st.session_state.rfl_list = df1_rfl
-                    is_re_render_sim = True
-                    st.session_state.rerun_rfl = True
-                else:
+            #telema-kyaw
+            required_keys = ['selected_hr','wp']
+            if all(k in st.session_state and st.session_state[k] is not None for k in required_keys):
+                try:
+                    #telema-kyaw
+                    # rfl_all_info = sql.posgre_get_rfl(*searching_input_rfl_values[1:])
+                    # st.session_state.rfl_matrix = rfl_all_info
+
+                    df1_rfl=rflq.posgre_get_rfl_tlm(
+                        st.session_state['selectoption1'],
+                        st.session_state['selectoption2'],
+                        st.session_state['selectoption3'],
+                        st.session_state['selectoption4'],
+                        st.session_state['selectoption5'],
+                        st.session_state['selected_hr'],
+                        st.session_state['wp'],
+                    )
+                    if df1_rfl is not None and not df1_rfl.empty: #チョー 03/10
+                        st.session_state.rfl_list = df1_rfl
+                        is_re_render_sim = True
+                        st.session_state.rerun_rfl = True
+                    else:
+                        st.error(f'PRJを選択してください。')
+                        st.image(co.inf_img, use_column_width=True)
+                    # st.rerun()
+                except Exception as e:
+                    raise e
+                    print('print exception',e)
                     st.error(f'PRJを選択してください。')
                     st.image(co.inf_img, use_column_width=True)
-                # st.rerun()
-            except Exception as e:
-                raise e
-                print('print exception',e)
-                st.error(f'PRJを選択してください。')
+                    is_re_render_rfl = False
+            else:
+                st.error(f'フェーズ、階層、性能を選択してください。')
                 st.image(co.inf_img, use_column_width=True)
-                is_re_render_rfl = False
         elif not st.session_state.login_begin: #チョー 03/10
             st.error(f'PRJを選択してください。')
             st.image(co.inf_img, use_column_width=True)
@@ -1568,6 +1851,7 @@ if int(st.session_state['chosen_id']) == 4:
         # Pattern 1~2
         base_df = st.session_state.rfl_list
         # go = gop.create_gridop_rfl_list()
+        base_df_summary = st.session_state.rfl_matrix #telema-kyaw
         
         # pattern 1~2
         
@@ -1680,8 +1964,15 @@ if int(st.session_state['chosen_id']) == 4:
            
             
         elif st.session_state['compare_click'] is not True:
+            #telema-kyaw
+            hierarchy = st.session_state.tmp_hr
+            print(hierarchy)
+            if hierarchy == '車両': prefix='c_'
+            if hierarchy == 'システム': prefix='s_'
+            if hierarchy == 'ユニット': prefix='u_'
+
             # pattern 3
-            base_df = base_df.sort_values(by=["project_code", "c_r_wp_id"])
+            base_df = base_df.sort_values(by=["project_code", f"{prefix}r_wp_id"])
             
             df_org = base_df.copy()
             prefixes = ['c_','s_','u_']
@@ -1693,287 +1984,238 @@ if int(st.session_state['chosen_id']) == 4:
             #to avoid same Ritems to appear in separated rows, sort them
             #just applied to car RFL only for now, further modifing could be needed idk
             #
-            c_requirement_unique = base_df['c_r_item'].drop_duplicates().tolist()
-            c_requirement_map = {}
-            for i, req in enumerate(c_requirement_unique):
-                c_requirement_map[req] = i
-            base_df['c_r_item_index']=base_df['c_r_item'].map(c_requirement_map)
+            requirement_unique = base_df[f'{prefix}r_item'].drop_duplicates().tolist()
+            requirement_map = {}
+            for i, req in enumerate(requirement_unique):
+                requirement_map[req] = i
+            base_df[f'{prefix}r_item_index']=base_df[f'{prefix}r_item'].map(requirement_map)
             
-            s_requirement_unique = base_df['s_r_item'].drop_duplicates().tolist()
-            s_requirement_map = {}
-            for i, req in enumerate(s_requirement_unique):
-                s_requirement_map[req] = i
-            base_df['s_r_item_index']=base_df['s_r_item'].map(s_requirement_map)
-            base_df = base_df.sort_values(by=['c_r_item_index','s_r_item_index'])#このならべかえっってなんだっけ
-            #山口　グルーピング前に、全RFLを新規追加したIndex列で並び変える 4/18
-            base_df =base_df.sort_values(by=['c_index','s_index','u_index'])
-            for i in range(len(prefixes)):
-                base_df.loc[base_df[f'{prefixes[i]}r_item'] == base_df[f'{prefixes[i]}r_item'].shift(),f'{prefixes[i]}r_item'] = ''
-                base_df.loc[base_df[f'{prefixes[i]}r_unit'] == base_df[f'{prefixes[i]}r_unit'].shift(),f'{prefixes[i]}r_unit'] = ''
+            #山口　グルーピング前に、全RFLを新規追加したIndex列で並び変える 4/18　この並び替え列は、重複消し処理の前にやらなければならないため位置移動 6/18
+            base_df =base_df.sort_values(by=[f'{prefix}index'])
+            st.write("base df:",base_df.reset_index(drop=True))
+            base_df.loc[base_df[f'{prefix}r_item'] == base_df[f'{prefix}r_item'].shift(),f'{prefix}r_item'] = ''
+            base_df.loc[base_df[f'{prefix}req'] == base_df[f'{prefix}req'].shift(),f'{prefix}req'] = '' #telema-kyaw rfl_update 8/22
+            base_df.loc[base_df[f'{prefix}r_unit'] == base_df[f'{prefix}r_unit'].shift(),f'{prefix}r_unit'] = ''
+            mask_r_scene = base_df[f'{prefix}r_scene'] == base_df[f'{prefix}r_scene'].shift()
 
-                # mask_r_item = base_df[f'{prefixes[i]}r_item'] == base_df[f'{prefixes[i]}r_item'].shift()
-                mask_r_scene = base_df[f'{prefixes[i]}r_scene'] == base_df[f'{prefixes[i]}r_scene'].shift()
-                # Set r_scene to '' if r_item is None (or empty) and both masks are true
-                base_df.loc[
-                    (base_df[f'{prefixes[i]}r_item'].isna() | (base_df[f'{prefixes[i]}r_item'] == '')) & mask_r_scene,
-                    f'{prefixes[i]}r_scene'
-                ] = ''
-                
+            base_df.loc[
+                (base_df[f'{prefix}r_item'].isna() | (base_df[f'{prefix}r_item'] == '')) & mask_r_scene,
+                f'{prefix}r_scene'
+            ] = ''
 
-                base_df.loc[base_df[f'{prefixes[i]}f_item'] == base_df[f'{prefixes[i]}f_item'].shift(),f'{prefixes[i]}f_item'] = ''
-                base_df.loc[base_df[f'{prefixes[i]}f_unit'] == base_df[f'{prefixes[i]}f_unit'].shift(),f'{prefixes[i]}f_unit'] = ''
 
-                base_df.loc[base_df[f'{prefixes[i]}l_item'] == base_df[f'{prefixes[i]}l_item'].shift(),f'{prefixes[i]}l_item'] = ''
-                base_df.loc[base_df[f'{prefixes[i]}l_unit'] == base_df[f'{prefixes[i]}l_unit'].shift(),f'{prefixes[i]}l_unit'] = ''
-                
-                # mask_l_item = base_df[f'{prefixes[i]}l_item'] == base_df[f'{prefixes[i]}l_item'].shift()
-                mask_l_scene = base_df[f'{prefixes[i]}l_scene'] == base_df[f'{prefixes[i]}l_scene'].shift()
-                
-                # Check if l_item is not None (or NaN) and both masks are True
-                base_df.loc[
-                    (base_df[f'{prefixes[i]}l_item'].isna() | (base_df[f'{prefixes[i]}l_item'] == '')) & mask_l_scene,
-                    f'{prefixes[i]}l_scene'
-                ] = ''
+            base_df.loc[base_df[f'{prefix}f_item'] == base_df[f'{prefix}f_item'].shift(),f'{prefix}f_item'] = ''
+            base_df.loc[base_df[f'{prefix}f_unit'] == base_df[f'{prefix}f_unit'].shift(),f'{prefix}f_unit'] = ''
+
+            base_df.loc[base_df[f'{prefix}l_item'] == base_df[f'{prefix}l_item'].shift(),f'{prefix}l_item'] = ''
+            # base_df.loc[base_df[f'{prefix}l_unit'] == base_df[f'{prefix}l_unit'].shift(),f'{prefix}l_unit'] = ''
+
+            mask_l_scene = base_df[f'{prefix}l_scene'] == base_df[f'{prefix}l_scene'].shift()
+
+            # Check if l_item is not None (or NaN) and both masks are True
+            base_df.loc[
+                (base_df[f'{prefix}l_item'].isna() | (base_df[f'{prefix}l_item'] == '')) & mask_l_scene,
+                f'{prefix}l_scene'
+            ] = ''
+
+
+            # cols = st.columns([5,1,1,1,2,1,1])
+
+            # summary_df = rfl_approval_summary(base_df_summary)
+
+            # # Display in Streamlit
+            # # st.write('summary_df: ',summary_df)
+            # with st.expander("承認率状況​"):
+            #     # st.write('summary_df: ',summary_df)
+            #     go = gop.update_rfl_dashboard_grid()
+            #     AgGrid(
+            #         summary_df,
+            #         custom_css=css_ag,
+            #         gridOptions=go,
+            #         reload_data=False,
+            #         height=650,
+            #     )
+
+            if 'meta_info_disp' not in st.session_state:
+                st.session_state.meta_info_disp = False
             
-            #山口　グルーピング前に、全RFLを新規追加したIndex列で並び変える 4/18
-            base_df =base_df.sort_values(by=['c_index','s_index','u_index'])
+            # col3 = st.columns([1])
+            # with st.container():
+            #     if st.button('RFL表示対象変更',key=f'rfl_chg_btn{i}'):
+            #         st.session_state.meta_info_disp = not st.session_state.meta_info_disp
+            #         st.rerun()
+                    # JPWH017780検証環境ではボタン押下時にグリッド表示の描画がしばしば止まる。
+                    # 環境に依存する問題の可能性があるが、確実に表示させたい場合、st.rerunを利用する。
 
-            # Separate rows #05/12 チョー
-            base_df_c = base_df[base_df["c_r_wp_summary_index"].notna()].copy()
-            base_df_s = base_df[base_df["c_r_wp_summary_index"].isna()].copy()
+            # if st.session_state.meta_info_disp:
+                # cols2 = st.columns([1,1,1,1])
+                # with st.container():
 
-            # Create a unified sort key column using available index #05/12 チョー
-            base_df_c["sort_index"] = base_df_c["c_r_wp_summary_index"]
-            base_df_s["sort_index"] = base_df_s["s_r_wp_summary_index"]
+                #     selected_meta = {
+                #         'hierarchy' : '',
+                #         'phase' : '',
+                #         'wp' : ''
+                #     }
 
-            # Combine both
-            combined_df = pd.concat([base_df_c, base_df_s], ignore_index=True)
+                #     # 選択肢は一つまで対応
 
-            #05/12 チョー
-            combined_df = combined_df.sort_values(by=['sort_index','c_index','s_index','u_index'])
-            base_df = combined_df
+                #     with cols2[0]:
+                #         selected_phase = st.multiselect(
+                #             'Phase',
+                #             st.session_state.other_phase,
+                #             placeholder='Phaseを指定',
+                #             key = f'phase_select{i}'
+                #         )
+                #         selected_meta['phase'] = selected_phase
 
-            for col in base_df.columns:#ここなんでループしているのかわからない
-                group_df = base_df.groupby(['sort_index']) #05/12 チョー
-            
-            
-            #ここでnanグループがあればさらに細分化する
-            #単にc_r_wp列にNaNgがあるか判断すればいいじゃん
-            group_df_wo_veh = None
-            performances = base_df['c_r_wp'].drop_duplicates().values.tolist()
-            if None in performances:#車両階層のないRFLを判定、あればさらにグルーピング
-                                
-                base_df_wo_veh = base_df[base_df['c_r_wp'].isnull()]
-                # st.write(base_df_wo_veh)
-                group_df_wo_veh = base_df_wo_veh.groupby(['s_project_code', 's_r_wp', 'lot'], dropna=False)
-                # st.write(group_df_wo_veh.groups.keys())
-            
-            data = []
-            cols = st.columns([4,1,1,1,1,1,1]) #山口　マトリックス表示用のボタン追加 2/13
+                #     with cols2[1]:
+                #         hierarchy_list = ['']
+                #         if selected_meta['phase']:
+                #             hierarchy_list = rflq.get_hierarchy(st.session_state.selectoption1,selected_meta['phase'])
+                #         selected_hierarchy = st.multiselect(
+                #             '階層',
+                #             hierarchy_list,
+                #             disabled = not selected_meta['phase'],
+                #             placeholder='階層を指定' if selected_meta['phase'] else 'Phaseを先に指定してください',
+                #             key = f'hierarchy_select{i}'
 
-            with cols[1]:
-                rfl_update_button()
-            with cols[2]:
+                #         )
+                #         selected_meta['hierarchy'] = selected_hierarchy
+
+                #     with cols2[2]:
+                #         wp_list = ['']
+                #         if selected_meta['phase'] and selected_meta['hierarchy']:
+                #             wp_list = rflq.get_wp(st.session_state.selectoption1,selected_meta['phase'],selected_meta['hierarchy'])
+
+                #         selected_wp = st.multiselect(
+                #             '領域',
+                #             wp_list,
+                #             disabled = not selected_meta['hierarchy'],
+                #             placeholder='領域を指定' if selected_meta['hierarchy'] else '階層を先に指定してください',
+                #             key = f'wp_select{i}'
+                #         )
+                #         selected_meta['wp'] = selected_wp
+
+                #     st.session_state.selected_meta = selected_meta
+
+                #     with cols2[3]:
+                #         disable = True
+                #         if selected_wp:
+                #             disable = False
+                #         make_rfl_refresh_button(i,disable)
+
+            with cols_btn[1]:
+                make_update_button(i)
+            with cols_btn[2]:
                 if st.session_state.rfl_edit_state is False or st.session_state.rfl_edit_state ==[]:
-                    rfl_edit_button_on()
+                    make_rfl_edit_on_button(i)
                 elif st.session_state.rfl_edit_state:
-                    rfl_edit_button_off()
-            with cols[3]:
-                rfl_compare_button()
-            with cols[4]:
-                rfl_tree_button()
-            with cols[5]:
-                rfl_matrix_button() #山口　マトリックス表示ファンクション 2/13
-            with cols[6]:
-                rfl_update_approval() #RFL承認 #チョー 04/14
+                    make_rfl_edit_off_button(i)
+            with cols_btn[3]:
+                make_rfl_compare_button(i)
+            with cols_btn[4]:
+                make_rfl_tree_button(i)
+            with cols_btn[5]:
+                rfl_matrix_button() 
+            with cols_btn[6]:
+                rfl_update_approval()
+            with cols_btn[7]:
+                make_rfl_download_button(i) #telema-kyaw rfl_update 8/22   
 
-        #チョー　05/09
-        summary_data = []
-        for key, gp_df in group_df:
-            row = gp_df.iloc[0]
-            group_identifier = extract_group_identifier(row)
-            summary_data.append(summarize_group(gp_df, group_identifier))
-        # #チョー　05/09
-        # for key, gp_df in group_df_wo_veh:
-        #     if key[1] not in ['排気', 'OBD', '高電圧']:
-        #         continue
-        #     # st.write('gp dfss:', gp_df)
-        #     row = gp_df.iloc[0]
-        #     group_identifier = extract_group_identifier(row)
-        #     summary_data.append(summarize_group(gp_df, group_identifier))
-
-        # Convert to DataFrame
-        summary_df = pd.DataFrame(summary_data)
-        # Display in Streamlit
-        st.write('summary_df: ',summary_df)
-        with st.expander("承認率状況​"):
-            # st.write('summary_df: ',summary_df)
-            go = gop.update_rfl_dashboard_grid()
-            AgGrid(
-                summary_df,
-                custom_css=css_ag,
-                gridOptions=go,
-                reload_data=False,
-                height=650,
-            )
-        # count_key = 0
-
-        for i,(key, df) in enumerate(group_df):
-            # Access the values from the first row of the group DataFrame #05/12 チョー
-            lot = df.iloc[0]['lot']
-            # Access the first row of the group #05/12 チョー
-            c_r_wp = df.iloc[0]['c_r_wp']
-            
-            # Check if 'c_r_wp' is None or NaN #05/12 チョー
-            if pd.isna(c_r_wp):  # This checks for both None and NaN
-                project_code = df.iloc[0]['s_project_code']
-                c_r_wp = df.iloc[0]['s_r_wp']  # If 'c_r_wp' is None or NaN, use 's_r_wp'
-            # count_key = i
-
-            # go を使いまわすとバインドされたDFが表示されるため毎回作成
-            go = gop.create_gridop_rfl_list()
-            
-            header_html = f"""
-            <div style="width: 400px; height: 140px;margin-left: 0;">
-            <style>
+            for col in base_df.columns:
+                group_df = base_df.groupby(['project_code','archi','lot','phase','hierarchy','wp'])
+            data = []
+            for i,(key, df) in enumerate(group_df):
+                go = gop.create_gridop_rfl_list()
+                header_html = f"""
+                <div style="width: 400px; height: 140px;margin-left: 0;">
+                <style>
                     .custom-header {{
                         font-weight: bold;
+                        # background-color: #FFFFFF;
                         background-color: #FFFFFF;
-                        padding: 5px;
                         display: flex;
                         justify-content: left;
+                        width: 100px;
                     }}
                     .custom-header table {{
                         border-collapse: collapse;
                         table-layout: fixed;
-                        background-color: #FFFFFF;
+                        # background-color: #FFFFFF;
                         # background-color: #e0ffff;
-                        # background-color: #000000;
-                        
+                        background-color: #000000;
+                        padding-top: 10px;
+                        width: 100px;
                     }}
                     .custom-header th,.custom-header td {{
                         border: 1px solid #ccc;
-                        padding: 8px;
-                        text-align: left;
-                        font-size: 16px;
-                        width: 200px;
+                        padding: 1px;
+                        text-align: center;
+                        font-size: 10px;
+                        width: 80px;
+                        height: 40px;
+                        background-color: #FFFFFF;
                     }}
-            </style>
-                                    
-            <div class="custom-header">
-                <table>
-                    <colgroup>
-                        <col style="width: 30%;">
-                        <col style="width: 30%;">
-                    </colgroup>                
-                    <tr>
-                        <th>Project Code</th>
-                        <td>{project_code}</td>
-                    </tr>
-                </table>
-                <table>
-                    <tr>
-                        <th>lot</th>
-                        <td>{lot}</td>
-                    </tr>
-                    <tr>
-                        <th>性能</th>
-                        <td>{c_r_wp}</td>
-                    </tr>
-                    </tr>            
-                </table>
-            </div>
-            """
-            
-            with st.container():
-                cols = st.columns([4])
-                with cols[0]:
-                    st.markdown(header_html, unsafe_allow_html=True)
-            st.write('rfl: ', df)
-            st.session_state[f'org_rfl_pj_{i}'] = df
-            
-            st.session_state[f'rfl_pj_response_{i}'] = render_aggrid_rfl(go,df,str(i))
+                    .custom-header th{{
+                        background-color: #4682B4;
+                    }}
+                </style>
 
-        # #車両階層のないものにも同様の処理
-        # for i,(key, df) in enumerate(group_df_wo_veh):
-        #     # st.write('df_org: ', df_org)
-        #     # st.write('gp_df: ', df)
-        #     if not key[1] in ['排気', 'OBD','高電圧']:  #山口　よくないのはわかっているけど個々の動作は音振OBDに限定したかった TODO 恒久版の対策を考えること
-        #         continue
-        #     # st.write(key)
-        #     # st.write(df)
-        #     # go を使いまわすとバインドされたDFが表示されるため毎回作成
-        #     go = gop.create_gridop_rfl_list()
-            
-        #     header_html = f"""
-        #     <div style="width: 400px; height: 140px;margin-left: 0;">
-        #     <style>
-        #             .custom-header {{
-        #                 font-weight: bold;
-        #                 background-color: #FFFFFF;
-        #                 padding: 5px;
-        #                 display: flex;
-        #                 justify-content: left;
-        #             }}
-        #             .custom-header table {{
-        #                 border-collapse: collapse;
-        #                 table-layout: fixed;
-        #                 background-color: #FFFFFF;
-        #                 # background-color: #e0ffff;
-        #                 # background-color: #000000;
-                        
-        #             }}
-        #             .custom-header th,.custom-header td {{
-        #                 border: 1px solid #ccc;
-        #                 padding: 8px;
-        #                 text-align: left;
-        #                 font-size: 16px;
-        #                 width: 200px;
-        #             }}
-        #     </style>
-                                    
-        #     <div class="custom-header">
-        #         <table>
-        #             <colgroup>
-        #                 <col style="width: 30%;">
-        #                 <col style="width: 30%;">
-        #             </colgroup>                
-        #             <tr>
-        #                 <th>Project Code</th>
-        #                 <td>{key[0]}</td>
-        #             </tr>
-        #         </table>
-        #         <table>
-        #             <tr>
-        #                 <th>lot</th>
-        #                 <td>{key[2]}</td>
-        #             </tr>
-        #             <tr>
-        #                 <th>性能</th>
-        #                 <td>{key[1]}</td>
-        #             </tr>
-        #             </tr>            
-        #         </table>
-        #     </div>
-        #     """
-            
-        #     with st.container():
-        #         cols = st.columns([4])
-        #         with cols[0]:
-        #             st.markdown(header_html, unsafe_allow_html=True)
-        #     #st.write(df)
-        #     st.session_state[f'org_rfl_pj_{i}'] = df
-            
-        #     st.session_state[f'rfl_pj_response_{count_key+i}'] = render_aggrid_rfl(go,df,str(i) + '_s')
-        #     # st.write(f'session response {i}', st.session_state[f'rfl_pj_response_{i}'])
+                <div class="custom-header">
+                    <table>
+                        <table>
+                            <tr>
+                                <th>Project</th>
+                                <td>{key[0]}</td>
+                            </tr>
+                            <tr>
+                                <th>PTタイプ</th>
+                                <td>{key[1]}</td>
+                            </tr>
+                        </table>
+                        <table>
+                            <tr>
+                                <th>lot</th>
+                                <td>{key[2]}</td>
+                            </tr>
+                            <tr>
+                                <th>階層</th>
+                                <td>{key[4]}</td>
+                            </tr>
+                        </table>
+                        <table>
+                            <tr>
+                                <th>性能</th>
+                                <td>{key[5]}</td>
+                            </tr>
+                            <tr>
+                                <th>フェーズ</th>
+                                <td>{key[3]}</td>
+                            </tr>
+                        </table>
+                    </table>
+                </div>
+                """
+                st.markdown(header_html, unsafe_allow_html=True)
 
-        
+                st.session_state[f'org_rfl_pj_{i}'] = df
+                st.session_state[f'rfl_pj_response_{i}'] = render_aggrid_rfl(go,df,i)
 
-#チョー 02/26 
-if st.session_state.rerun_rfl:
-    # print("rerun rfl")
-    st.session_state.rerun_rfl = False
+#telema-kyaw
+# -----Telema-----
+# RFLセル変更状況リフレッシュ
+# Created: 2025/02/19
+init_session_state('edit_refresh')
+if st.session_state.edit_refresh:
+    st.session_state.edit_refresh = False
     st.rerun()
+# -----Telema-----        
+
+# #チョー 02/26 
+# if st.session_state.rerun_rfl:
+#     # print("rerun rfl")
+#     st.session_state.rerun_rfl = False
+#     st.rerun()
 
 # #RFLメニューが選択された場合
 # if int(st.session_state['chosen_id'])  == 4:
@@ -2007,11 +2249,6 @@ if st.session_state.rerun_rfl:
 #     """,
 #     unsafe_allow_html=True
 # )
-
-#山口　計算用のページ作成
-
-if int(st.session_state['chosen_id'])  == 5 :
-   Jcurb.Jcurb_ui()
 
 #チョー　追加 03/10
 if not st.session_state.login_begin:

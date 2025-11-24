@@ -164,10 +164,6 @@
 },
 ".ag-header-group-cell.group_dashboard_performance .ag-header-group-text":{ 
     "font-size": "15px !important;"
-},".ag-header-cell.cost":{
-    "background-color": "#002060;",
-    "color": "#FFFFFF;",
-    "font-size": "12px;"
 }
 
 }

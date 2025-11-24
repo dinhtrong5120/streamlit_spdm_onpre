@@ -11,7 +11,12 @@ from db.db_connection import DBConnection as DBCon
 from queries import rfl_pj_select as pj_select_query
 # from query_builder import QueryBuilder as qb
 from queries import rfl_select as rfl_select_query,rfl_update as rfl_update_query
-from pandas.api.types import is_datetime64_any_dtype
+#telema-kyaw rfl_update 8/22
+from queries.r_tree import rfl_primary_tree as primary_tree_query,rfl_secondary_tree as secondary_tree_query,rfl_third_tree as third_tree_query
+from queries.f_tree import rfl_primary_tree as primary_f_tree_query,rfl_secondary_tree as secondary_f_tree_query,rfl_third_tree as third_f_tree_query
+from queries.l_tree import l_tree
+from queries.grid import rfl_grid 
+
 class RFLRepository:
 
     @staticmethod
@@ -238,6 +243,37 @@ class RFLRepository:
 
             return result
 
+    # @staticmethod
+    # def update_rfl(project_id,rfl_id,phase_id,diff_col,diff_value):
+    #     """編集値をupdate
+
+    #     Args:
+    #         project_id (int): 複合主キー1
+    #         rfl_id (int): 複合主キー2
+    #         phase_id (int): 複合主キー3
+    #         diff_col (string): 変更対象列
+    #         diff_value (string/int): 編集値
+    #     """
+    #     if diff_col == 'req':
+    #         diff_col = 'requirement'
+    #     if diff_col == 'func':
+    #         diff_col = 'function'    
+    #     project_id = (project_id,)
+    #     rfl_id = (rfl_id,)
+    #     phase_id = (phase_id,)
+    #     diff_value = (diff_value,)
+
+    #     lock_query = rfl_select_query.get_select_query('lock_prj_rfl_for_update')
+    #     update_query = rfl_update_query.get_update_query('update_edited_prj_rfl').format(diff_col)
+
+    #     with DBCon(False) as connection:
+    #         cur = connection.cursor()
+    #         # 排他制御
+    #         cur.execute(lock_query,(project_id,rfl_id,phase_id))
+    #         # update
+    #         cur.execute(update_query,(diff_value,project_id,rfl_id,phase_id))
+
+    #telema-kyaw rfl_update 8/22
     @staticmethod
     def update_rfl(project_id,rfl_id,phase_id,diff_col,diff_value):
         """編集値をupdate
@@ -249,24 +285,82 @@ class RFLRepository:
             diff_col (string): 変更対象列
             diff_value (string/int): 編集値
         """
+
+        # noteの場合、単独Update
+        if diff_col =='note':
+            project_id = (project_id,)
+            rfl_id = (rfl_id,)
+            phase_id = (phase_id,)
+            diff_value = (diff_value,)
+            lock_query = rfl_select_query.get_select_query('lock_prj_rfl_for_update')
+            update_query = rfl_update_query.get_update_query('update_edited_prj_rfl').format(diff_col)
+
+            with DBCon(False) as connection:
+                cur = connection.cursor()
+                # 排他制御
+                cur.execute(lock_query,(project_id,rfl_id,phase_id))
+                # update
+                cur.execute(update_query,(diff_value,project_id,rfl_id,phase_id))
+                return
+
+        # 要求値更新の場合、同項目の値を全更新
+        get_rfl_query = rfl_select_query.get_select_query('get_rfl')
+        result = ''
+        with DBCon() as connection:
+            result = pd.read_sql_query(get_rfl_query,connection,params=(rfl_id,))
+        rfl_col = ''
+        print('diff_col:',diff_col)
         if diff_col == 'req':
             diff_col = 'requirement'
+            rfl_col = 'requirement_s_id'
         if diff_col == 'func':
-            diff_col = 'function'    
+            diff_col = 'function'
+            rfl_col = 'function_id'
+        if diff_col == 'logic':
+            rfl_col = 'logic_s_id'
+
+        rfl_element_id = int(result.loc[0,rfl_col])
+        update_bulk_query = rfl_update_query.get_update_query('bulk_update_edited_prj_rfl').format(rfl_col,diff_col)
         project_id = (project_id,)
         rfl_id = (rfl_id,)
         phase_id = (phase_id,)
         diff_value = (diff_value,)
 
         lock_query = rfl_select_query.get_select_query('lock_prj_rfl_for_update')
-        update_query = rfl_update_query.get_update_query('update_edited_prj_rfl').format(diff_col)
+        update_query = rfl_update_query.get_update_query('update_edited_prj_rfl')
 
         with DBCon(False) as connection:
             cur = connection.cursor()
             # 排他制御
             cur.execute(lock_query,(project_id,rfl_id,phase_id))
-            # update
-            cur.execute(update_query,(diff_value,project_id,rfl_id,phase_id))
+            cur.execute(update_bulk_query,(rfl_element_id,diff_value))
+
+    #telema-kyaw rfl_update 8/22
+    @staticmethod
+    def get_r_tree_from_lower_hr(wp,project_code,hierarchy):
+        print('hierarchy: ',hierarchy)
+        print('wp: ',wp)
+        print('project_code: ',project_code)
+        if hierarchy == 'システム':
+            query = rfl_select_query.get_select_query('get_r_tree_from_hr2')
+            print('system hr2 query: ',query)
+        if hierarchy == 'ユニット':
+            query = rfl_select_query.get_select_query('get_r_tree_from_hr3')
+        with DBCon(False) as connection:
+            df = pd.read_sql_query(query,connection,params=(wp,project_code,))
+            df = df.convert_dtypes()
+            return df
+        
+    #telema-kyaw rfl_update 8/22
+    #  --------------------------------------------- for excel ------------------------------------------------------
+    @staticmethod
+    def get_hierarchical_rfl_grid(project_code,phase,wp):
+        query = rfl_grid.get_rfl_historical_grid()
+        with DBCon(False) as connection:
+            df = pd.read_sql_query(query,connection,params=(project_code,phase,wp,))
+            df = df.convert_dtypes()
+
+            return df
 
     @staticmethod
     def get_wps(wp,hr):
@@ -358,20 +452,153 @@ class RFLRepository:
 
             return df
 
+#telema-kyaw rfl_update 9/2
+# --------------------------------------------- r_tree ------------------------------------------------------
+
     @staticmethod
-    def get_rfl_download_data(hierarchy_list=[], wp_list=[]):
+    def get_r_primary_wps(hierarchy,wp,project_code):
+        print('wp in r_primary_wps: ',wp)
+        print('project_code in r_primary_wps: ',project_code)
+        print('hierarchy in r_primary_wps: ',hierarchy)
+
+        if hierarchy == '車両':
+            query = primary_tree_query.get_select_query('get_primary_wps_from_hr1')
+
+        if hierarchy == 'システム':
+            query = primary_tree_query.get_select_query('get_primary_wps_from_hr2')
+            if not st.session_state.third_tree_flag:
+                wp = (wp,)
+
+        if hierarchy == 'ユニット':
+            query = primary_tree_query.get_select_query('get_primary_wps_from_hr3')
+
+        if hierarchy == 'f_s':
+            query = primary_tree_query.get_select_query('get_primary_wps_from_hr2')
+            wp = (wp,)
+
+        with DBCon(False) as connection:
+            df = pd.read_sql_query(query,connection,params=(wp,project_code,))
+            df = df.convert_dtypes()
+
+        return df
+
+    @staticmethod
+    def get_r_secondary_wps(hierarchy,wp,project_code):
+        if hierarchy == '車両':
+            query = secondary_tree_query.get_select_query('get_secondary_wps_from_hr1')
+        if hierarchy == 'システム':
+            query = secondary_tree_query.get_select_query('get_secondary_wps_from_hr2')
+        if hierarchy == 'ユニット':
+            query = secondary_tree_query.get_select_query('get_secondary_wps_from_hr3')
+
+        with DBCon(False) as connection:
+            df = pd.read_sql_query(query,connection,params=(wp,project_code,))
+            df = df.convert_dtypes()
+
+        return df
+
+    @staticmethod
+    def get_r_third_wps(hierarchy,wp,project_code):
+        if hierarchy == '車両':
+            query = third_tree_query.get_select_query('get_third_wps_from_hr1')
+        # if hierarchy == 'システム':
+        #     query = third_tree_query.get_select_query('get_third_wps_from_hr2')
+        if hierarchy == 'ユニット':
+            query = third_tree_query.get_select_query('get_third_wps_from_hr3')
+
+        with DBCon(False) as connection:
+            df = pd.read_sql_query(query,connection,params=(wp,project_code,))
+            df = df.convert_dtypes()
+
+        return df
+
+#telema-kyaw rfl_update 9/2
+#  --------------------------------------------- f_tree ------------------------------------------------------
+
+    @staticmethod
+    def get_f_primary_wps(hierarchy,wp,project_code):
+        if hierarchy == '車両':
+            query = primary_f_tree_query.get_select_query('get_primary_function_from_hr1')
+        if hierarchy == 'システム':
+            query = primary_f_tree_query.get_select_query('get_primary_function_from_hr2')
+            if not st.session_state.third_tree_flag:
+                wp = (wp,)
+        if hierarchy == 'ユニット':
+            query = primary_f_tree_query.get_select_query('get_primary_function_from_hr3')
+
+        if hierarchy == 'f_s':
+            query = primary_f_tree_query.get_select_query('get_primary_function_from_hr2')
+
+
+        with DBCon(False) as connection:
+            df = pd.read_sql_query(query,connection,params=(wp,project_code,))
+            df = df.convert_dtypes()
+
+        return df
+
+
+    @staticmethod
+    def get_f_secondary_wps(hierarchy,wp,project_code):
+        if hierarchy == '車両':
+            query = secondary_f_tree_query.get_select_query('get_secondary_function_from_hr1')
+        if hierarchy == 'システム':
+            query = secondary_f_tree_query.get_select_query('get_secondary_function_from_hr2')
+        if hierarchy == 'ユニット':
+            query = secondary_f_tree_query.get_select_query('get_secondary_function_from_hr3')
+
+        with DBCon(False) as connection:
+            df = pd.read_sql_query(query,connection,params=(wp,project_code,))
+            df = df.convert_dtypes()
+
+        return df
+
+
+    @staticmethod
+    def get_f_third_wps(hierarchy,wp,project_code):
+        if hierarchy == '車両':
+            query = third_f_tree_query.get_select_query('get_third_function_from_hr1')
+        if hierarchy == 'システム':
+            query = secondary_f_tree_query.get_select_query('get_secondary_function_from_hr2')
+        if hierarchy == 'ユニット':
+            query = third_f_tree_query.get_select_query('get_third_function_from_hr3')
+
+        with DBCon(False) as connection:
+            df = pd.read_sql_query(query,connection,params=(wp,project_code,))
+            df = df.convert_dtypes()
+
+        return df
+
+#telema-kyaw rfl_update 9/2
+#  --------------------------------------------- l_tree ------------------------------------------------------
+
+    @staticmethod
+    def get_l_tree(project_code):
+        query = l_tree.get_select_query('get_l_tree_in_pj')
+        print('query in get_l_tree: ',query)
+        with DBCon(False) as connection:
+            df = pd.read_sql_query(query,connection,params=(project_code,))
+            df = df.convert_dtypes()
+
+            return df    
+
+# -------------------------------------------------------------------------------------------------------------
+
+    #Retrieve the data for rfl_download function #Kyaw 10/07
+    #Params: 階層、領域
+    def get_rfl_download_data(hierarchy_list = [], wp_list = []):
+
         with DBCon() as connection:
             # リストの要素をシングルクォートで囲んでカンマで結合
             hierarchy_list_str = ', '.join(f"'{item}'" for item in hierarchy_list)
             wp_list_str = ', '.join(f"'{item}'" for item in wp_list)
             if hierarchy_list_str and wp_list_str:
-
-                # 選択されたＷＰの車両の情報を取得
+                
+                #選択されたＷＰの車両の情報を取得
                 df1_query = f"""
                     SELECT 
                         pj_id, 
                         pj_code, 
-                        -- drivetrain, 
+                        drivetrain, 
                         hierarchy, 
                         hierarchy_id, 
                         r_wp_id, 
@@ -424,12 +651,12 @@ class RFLRepository:
                     WHERE pj_id = 14 AND phase_id = 3 AND hierarchy_id = 1 AND r_wp = {(wp_list_str)}
                     ORDER BY index
                 """
-                # 選択されたＷＰのシステムの情報を取得
+                #選択されたＷＰのシステムの情報を取得
                 df2_query = f"""
                     SELECT 
                         pj_id, 
                         pj_code, 
-                        -- drivetrain, 
+                        drivetrain, 
                         hierarchy, 
                         hierarchy_id, 
                         r_wp_id, 
@@ -482,12 +709,12 @@ class RFLRepository:
                     WHERE pj_id = 14 AND phase_id = 3 AND hierarchy_id = 2 AND r_wp = {(wp_list_str)}
                     ORDER BY index
                 """
-                # 選択されたＷＰのユニットの情報を取得
+                #選択されたＷＰのユニットの情報を取得
                 df3_query = f"""
                     SELECT 
                         pj_id, 
                         pj_code, 
-                        -- drivetrain, 
+                        drivetrain, 
                         hierarchy, 
                         hierarchy_id, 
                         r_wp_id, 
@@ -543,15 +770,6 @@ class RFLRepository:
                 df1 = pd.read_sql(df1_query, connection)
                 df2 = pd.read_sql(df2_query, connection)
                 df3 = pd.read_sql(df3_query, connection)
-                for df in [df1, df2, df3]:
-                    if not df.empty:
-                        df["r_item"] = df["r_item"].astype(str).str.strip()
-                        df["f_item"] = df["f_item"].astype(str).str.strip()
-                        df["l_item"] = df["l_item"].astype(str).str.strip()
-                        if is_datetime64_any_dtype(df['receiver_date']):
-                            df['receiver_date'] = df['receiver_date'].dt.round('S')
-                        if is_datetime64_any_dtype(df['sender_date']):
-                            df['sender_date'] = df['sender_date'].dt.round('S')
 
                 def append_missing_df3_rows(hierarchy_res: pd.DataFrame, df3: pd.DataFrame) -> pd.DataFrame:
                     df3_ids = set(df3['r_s_id'])
@@ -566,7 +784,7 @@ class RFLRepository:
                     missing_rows = df3[df3['r_s_id'].isin(missing_ids)]
                     missing_rows_prefixed = missing_rows.rename(columns=lambda col: f'hr3_{col}')
 
-                    # Add hr3_index column explicitly with None (if it's in final DataFrame structure)
+                    # ✅ Add hr3_index column explicitly with None (if it's in final DataFrame structure)
                     if 'hr3_index' in hierarchy_res.columns:
                         missing_rows_prefixed['hr3_index'] = None
 
@@ -583,7 +801,7 @@ class RFLRepository:
 
                     # Append and return
                     return pd.concat([hierarchy_res, missing_rows_prefixed], ignore_index=True)
-
+            
                 def conditional_sort_hierarchical_df(df):
                     sort_cols = ['hr1_index', 'hr2_index', 'hr3_index']
                     existing_cols = [col for col in sort_cols if col in df.columns]
@@ -704,13 +922,13 @@ class RFLRepository:
 
                     return pd.DataFrame(rows)
 
-                hierarchy_res = build_full_hierarchical_dataframe(df1, df2, df3)
+                hierarchy_res = build_full_hierarchical_dataframe(df1,df2,df3)
                 if not df3.empty:
                     hierarchy_res = append_missing_df3_rows(hierarchy_res, df3)
-                # result_df = build_full_hierarchical_dataframe(df1, df2, df3)
                 sorted_hierarchy_res = conditional_sort_hierarchical_df(hierarchy_res)
 
                 return sorted_hierarchy_res
 
             else:
                 return []
+

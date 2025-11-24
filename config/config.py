@@ -83,8 +83,12 @@ class RFLGridConfig:
             },
             'allocation' :{
                 'title' : 'Allocation',
-                'col' : 'allocation'
-            },            
+                'col' : 'l_wp'
+            }, 
+            'log_condition' :{
+                'title' : '等号・不等号',
+                'col' : 'log_condition'
+            },             
         },
         #RFL承認のため　＃チョー　04/14
         'approve_cols' : {
@@ -184,3 +188,16 @@ class RFLGridConfig:
             result = get_nest_value(cls.cols)
             results.append(result)
         return results
+    
+#telema-kyaw rfl tree update 922
+effect_font_color_defs = {
+    'primary_color': '#FFFFFF',
+    'secondary_color': '#12FF03',
+    'third_color': "#d30808"
+}
+
+effect_edge_color_defs = {
+    'primary_color': '#000000',
+    'secondary_color': "#000000",
+    'third_color': "#d30808"
+}

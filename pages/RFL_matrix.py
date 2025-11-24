@@ -13,6 +13,7 @@ import module.utils as utl
 from module.PsqlModule import psql_class
 import time
 from st_aggrid.grid_options_builder import GridOptionsBuilder
+import re
 
 # CSSファイルの内容を読み込む
 with open(co.css, encoding='utf-8') as f:
@@ -35,6 +36,10 @@ function(params) {
 	return null;
 }
 """)
+
+#チョー 04/03
+if 'rerun_rfl_to' not in st.session_state:
+    st.session_state.rerun_rfl_to = False
 
 # 列のスタイルを決定する関数
 def get_column_style(df, column_name):
@@ -120,6 +125,9 @@ agg_function = {
         const pivotKeysFoldStatus = params?.pivotResultColumn?.colDef?.pivotKeys?.length > 1 ? false : true;
         //console.log('pivotKeysFoldStatus: ', pivotKeysFoldStatus);
         const rowNodeLevel = params?.rowNode?.level;
+        if (rowNodeLevel === 0){
+            return null;          
+        }
         
         let aggResult = '';
         let aggValuesList = [];
@@ -146,6 +154,25 @@ agg_function = {
     }"""),
 }
 # ==========
+
+#サマリーのTO自動判定の背景色変更 #Kyaw 06/20
+summaryTredeOffBGcolor = JsCode("""
+function(params) {
+    const keys = Object.keys(params.data);
+    
+    for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        if ((key.startsWith('is_to_') || key.startsWith('perf_is_to_')) && params.data[key] === true) {
+            // Highlight row if any is_to_* or perf_is_to_* is true
+            return {
+                'backgroundColor': 'lightyellow'
+            };
+        }
+    }
+
+    return {};  // Default: no background color
+}
+""")
 
 def filter_items(df,item_name):
     logic = f"{item_name}_logic"
@@ -183,27 +210,56 @@ def is_valid_number(value):
         return False
 
 #チョー　05/19 TO自動判定機能
-def check_overlap(v1, op1, v2, op2):
-    print(f'in fun: {v1},{op1} and {v2},{op2}')
-    v1 = float(v1)
-    v2 = float(v2)
-    if v1 == v2:
-        conflicting_pairs = {
-            '<': {'>', '=', '≧'},
-            '>': {'<', '=', '≦'},
-            '=': {'<', '>'},
-            '≦': {'>'},
-            '≧': {'<'},
-        }
-        return op2 in conflicting_pairs.get(op1, set())
-    
-    if op1 == op2 and '=' not in (op1, op2):
-        return False
-    if v1 > v2:
-        return op1 in {'>', '=', '≧'} and op2 in {'<', '=', '≦'}
-    if v1 < v2:
-        return op1 in {'<', '=', '≦'} and op2 in {'>', '=', '≧'}
-    return False
+def check_overlap(op1, v1, op2, v2, epsilon=1e-9):
+    # Normalize operators
+    op_map = {
+        '＞': '>',
+        '>': '>',
+        '＜': '<',
+        '<': '<',
+        '＝': '=',
+        '=': '=',
+        '≧': '>=',
+        '≦': '<=',
+    }
+
+    # Auto-detect swapped arguments
+    def normalize_inputs(op, val):
+        # If val is NOT convertable to float, then swap
+        try:
+            float(val)
+            return op_map.get(op, op), float(val)
+        except:
+            # Swap (val is actually operator, op is value)
+            return op_map.get(val, val), float(op)
+
+    op1, v1 = normalize_inputs(op1, v1)
+    op2, v2 = normalize_inputs(op2, v2)
+
+    # Convert constraint "x op value" → range
+    def get_x_range(op, v):
+        if op == '=':
+            return v, v
+        elif op == '>':
+            return v + epsilon, float('inf')
+        elif op == '>=':
+            return v, float('inf')
+        elif op == '<':
+            return float('-inf'), v - epsilon
+        elif op == '<=':
+            return float('-inf'), v
+        else:
+            raise ValueError(f"Unsupported operator: {op}")
+
+    L1, R1 = get_x_range(op1, v1)
+    L2, R2 = get_x_range(op2, v2)
+
+    # Overlap occurs if the intervals intersect
+    overlap = max(L1, L2) <= min(R1, R2)
+
+    # TRUE when there is NO overlap
+    return not overlap
+
 
 #チョー　TOになる行の「to_result」にTrueを入れる
 def update_overlap_df(df,df_name):
@@ -211,26 +267,22 @@ def update_overlap_df(df,df_name):
     df['to_result'] = False
     # Group and compare within groups
     group_df = df.groupby([f'{df_name}_r_wp', f'{df_name}_l_wp', f'{df_name}_l_item'], dropna=False)
-
+    
     for name, group in group_df:
-        # if df_name == 's':
-        #     if group.iloc[0][f'{df_name}_r_wp'] == '4WD' and group.iloc[0][f'{df_name}_l_wp'] == 'Unit(ePT)' and (group.iloc[0][f'{df_name}_l_item'] == 'FR MOT_Max_Speed_力行_車両要求' or group.iloc[0][f'{df_name}_l_item'] == 'RR MOT_Max_Speed_力行_車両要求'):
-        #         st.write(f'df data in {df_name}:', group)
-        # elif df_name == 'c':
-        #     if group.iloc[0][f'{df_name}_r_wp'] == '4WD' and group.iloc[0][f'{df_name}_l_wp'] == 'PWT(4WD)' and (group.iloc[0][f'{df_name}_l_item'] == 'DS駆動 FR トルク' or group.iloc[0][f'{df_name}_l_item'] == 'DS駆動 RR トルク'):
-        #         st.write(f'df data in {df_name}:', group)
         indices = group.index.tolist()
         n = len(group)
-        conflict_found = False  # Flag to track if conflict was found
+        matched_indices = set()  # Track matched rows
+        # conflict_found = False  # Flag to track if conflict was found
         for i in range(n):
-            if conflict_found:  # Stop processing once if conflict was found
-                break
             row_i = group.iloc[i]
             val_i = row_i[f'{df_name}_logic']
             op_i = row_i[f'{df_name}_log_condition']
             # Check validity
-            if not is_valid_number(val_i) or pd.isna(op_i) or op_i.strip() not in ('<','>','=','≧','≦'):
+            if not is_valid_number(val_i) or pd.isna(op_i) or op_i.strip() not in ('<','＜','>','＞','=','＝','≧','≦'): #07/17 Kyaw
+                df.at[indices[i], f'{df_name}_to_pattern'] = '比較対象がない'
                 continue
+
+            matched = False  # Track if a match was found
 
             for j in range(i + 1, n):
                 row_j = group.iloc[j]
@@ -238,25 +290,492 @@ def update_overlap_df(df,df_name):
                 op_j = row_j[f'{df_name}_log_condition']
 
                 # Check validity
-                if not is_valid_number(val_j) or pd.isna(op_j) or op_j.strip() not in ('<','>','=','≧','≦'):
+                if not is_valid_number(val_j) or pd.isna(op_j) or op_j.strip() not in ('<','＜','>','＞','=','＝','≧','≦'): #07/17 Kyaw
                     continue
 
                 if check_overlap(val_i, op_i, val_j, op_j):
-                    print(f'match result-> val1: {val_i}{op_i} and val2: {val_j}{op_j}')
+                    # Print TO conflict details
+                    print(f'TO detected -> value1: {val_i}, op1: {op_i}, value2: {val_j}, op2: {op_j}')
                     # Mark both rows as True for conflict
                     df.at[indices[i], 'to_result'] = True
                     df.at[indices[j], 'to_result'] = True
-                    conflict_found = True  # Stop further checks for this group
+                    # conflict_found = True  # Stop further checks for this group
+                    df.at[indices[i], f'{df_name}_to_pattern'] = 'TO'
+                    df.at[indices[j], f'{df_name}_to_pattern'] = 'TO'
+                    matched_indices.add(indices[i])
+                    matched_indices.add(indices[j])
+                    matched = True
                     break
+            if not matched and indices[i] not in matched_indices:
+                df.at[indices[i], f'{df_name}_to_pattern'] = 'TOがない'
     return df
+
+
+# #Kyaw 06/20
+# def update_summary_df(df, performance_list):
+#     st.write('df summ: ', df)
+#     selected_variation = st.session_state.selected_variation
+#     allowed_ops = {'<','＜','>','＞','=','＝','≧','≦'}
+    
+#     # ==================================================================================
+#     # Helper function: Compare two values with their operators
+#     # ==================================================================================
+#     def compare_values(value1, op1, value2, op2):
+#         """
+#         Compare two values with their operators to determine if there's a TO conflict.
+#         Returns:
+#             (None, pattern) - if comparison cannot be made (missing data)
+#             (False, pattern) - if no TO found (either "TOなし" or "比較対象がない")
+#             (True, "TO") - if TO conflict found
+#         """
+#         # Validate that both values exist and are valid numbers
+#         if (value1 is None or value2 is None or value1 == '' or value2 == '' or 
+#             not is_valid_number(value1) or not is_valid_number(value2)):
+#             return None, "比較対象がない"
+        
+#         # Validate that both operators exist and are in the allowed set
+#         if (op1 is None or op1 == '' or op2 is None or op2 == '' or 
+#             op1 not in allowed_ops or op2 not in allowed_ops):
+#             return None, "比較対象がない"
+        
+#         # Convert string values to float for numerical comparison
+#         value1f = float(value1)
+#         value2f = float(value2)
+        
+#         # Check if values have opposite signs (one positive, one negative)
+#         # This indicates incompatible requirements that cannot be compared
+#         if (value1f < 0 < value2f) or (value2f < 0 < value1f):
+#             return False, "比較対象がない"
+        
+#         # Perform overlap check to determine if there's a TO conflict
+#         # check_overlap returns True if the two conditions overlap (TO conflict)
+#         if not check_overlap(op1, value1f, op2, value2f):
+#             return False, "TOなし"
+        
+#         # TO conflict detected
+#         return True, "TO"
+    
+#     # ==================================================================================
+#     # Part 1: SE comparison - selected_variation vs each performance
+#     # ==================================================================================
+#     value1_col = f'{selected_variation}_value'
+#     op1 = '='  # fixed operator for SE
+    
+#     for perf_key in performance_list:
+#         # Define column names for this performance's logic value and operator
+#         value2_col = f'logic_{perf_key}'
+#         op2_col = f'log_condition_{perf_key}'
+        
+#         # Skip this performance if any required columns are missing from the dataframe
+#         if value1_col not in df.columns or value2_col not in df.columns or op2_col not in df.columns:
+#             st.write(f"Skipping {perf_key} due to missing column")
+#             continue
+        
+#         def row_compare(row, pk=perf_key):
+#             """Compare SE variation value against performance logic value."""
+#             # Get the SE variation value (value1)
+#             value1 = row[value1_col]
+#             # Get the performance logic value (value2)
+#             value2 = row[f'logic_{pk}']
+#             # Get the performance operator
+#             op2 = row[f'log_condition_{pk}']
+#             # Perform the comparison
+#             is_to, pattern = compare_values(value1, op1, value2, op2)
+#             # Print comparison details only if result is TO or TOなし (not 比較対象がない)
+#             if pattern in ['TO', 'TOなし']:
+#                 print(f'SE Comparison -> SE variation: {selected_variation}, Performance: {pk}')
+#                 print(f'  SE value: {value1}, SE op: {op1} | Perf value: {value2}, Perf op: {op2}')
+#                 print(f'  Result: {pattern}')
+#             # Store the pattern result in the dataframe
+#             df.at[row.name, f'to_pattern_{pk}'] = pattern
+#             # Return boolean result (convert None to False)
+#             return is_to if is_to is not None else False
+        
+#         def conditional_row_compare(row, pk=perf_key):
+#             """Check if is_to value already exists in database, otherwise calculate it."""
+#             col_name = f'is_to_{pk}'
+#             # If is_to value already exists in the dataframe (from database), use it
+#             if col_name in df.columns and pd.notna(row[col_name]):
+#                 return row[col_name]
+#             # Otherwise, calculate it using row_compare
+#             return row_compare(row, pk)
+        
+#         # Apply the conditional comparison to all rows for this performance
+#         # This creates or updates the is_to column for this performance
+#         df[f'is_to_{perf_key}'] = df.apply(lambda row: conditional_row_compare(row, perf_key), axis=1)
+    
+#     # ==================================================================================
+#     # Part 2: Cross-performance comparison (early-exit strategy)
+#     # Compare each performance against all other performances to find TO conflicts
+#     # ==================================================================================
+#     # Initialize result columns for each performance with default values
+#     for perf_key in performance_list:
+#         df[f'perf_is_to_{perf_key}'] = False  # Default: no TO conflict
+#         df[f'perf_to_pattern_{perf_key}'] = "比較対象がない"  # Default pattern
+    
+#     def process_perf_comparisons(row):
+#         """
+#         Process cross-performance comparisons for a single row.
+#         Early-exit strategy: Once a performance finds a TO conflict, mark both and skip further checks.
+#         """
+#         # Track which performances have already been identified as having TO conflicts
+#         marked_perfs = set()
+        
+#         # Iterate through all performance pairs (avoiding duplicates)
+#         for i, perf_key1 in enumerate(performance_list):
+            
+#             # Skip if this performance already has a TO conflict identified
+#             if perf_key1 in marked_perfs:
+#                 continue
+            
+#             # Verify required columns exist for this performance
+#             if f'logic_{perf_key1}' not in df.columns or f'log_condition_{perf_key1}' not in df.columns:
+#                 continue
+            
+#             # Compare with all subsequent performances (i+1 onwards to avoid duplicate comparisons)
+#             for perf_key2 in performance_list[i+1:]:
+#                 # Skip if second performance already has a TO conflict identified
+#                 if perf_key2 in marked_perfs:
+#                     continue
+                
+#                 # Verify required columns exist for second performance
+#                 if f'logic_{perf_key2}' not in df.columns or f'log_condition_{perf_key2}' not in df.columns:
+#                     continue
+                
+#                 # Extract logic values and operators for both performances
+#                 value1 = row[f'logic_{perf_key1}']
+#                 op1_perf = row[f'log_condition_{perf_key1}']
+#                 value2 = row[f'logic_{perf_key2}']
+#                 op2_perf = row[f'log_condition_{perf_key2}']
+                
+#                 # Compare the two performances using the helper function
+#                 is_to, pattern = compare_values(value1, op1_perf, value2, op2_perf)
+                
+#                 if is_to is None:
+#                     # Cannot perform comparison (missing data or invalid operators) - skip to next pair
+#                     # Don't print 比較対象がない cases
+#                     continue
+#                 elif is_to is False:
+#                     # No TO conflict found - update pattern if it hasn't been set yet
+#                     # Only overwrite the default "比較対象がない" message
+#                     # Print only if pattern is TOなし (not 比較対象がない)
+#                     if pattern == 'TOなし':
+#                         print(f'Performance Cross-Comparison -> Perf1: {perf_key1} vs Perf2: {perf_key2}')
+#                         print(f'  Perf1 value: {value1}, Perf1 op: {op1_perf} | Perf2 value: {value2}, Perf2 op: {op2_perf}')
+#                         print(f'  Result: {pattern}')
+#                     if row[f'perf_to_pattern_{perf_key1}'] == "比較対象がない":
+#                         row[f'perf_to_pattern_{perf_key1}'] = pattern
+#                     if row[f'perf_to_pattern_{perf_key2}'] == "比較対象がない":
+#                         row[f'perf_to_pattern_{perf_key2}'] = pattern
+#                     continue
+#                 else:
+#                     # TO conflict found! Print the details
+#                     print(f'Performance Cross-Comparison -> Perf1: {perf_key1} vs Perf2: {perf_key2}')
+#                     print(f'  Perf1 value: {value1}, Perf1 op: {op1_perf} | Perf2 value: {value2}, Perf2 op: {op2_perf}')
+#                     print(f'  Result: *** TO CONFLICT DETECTED ***')
+#                     # TO conflict found! Mark both performances
+#                     row[f'perf_is_to_{perf_key1}'] = True
+#                     row[f'perf_to_pattern_{perf_key1}'] = "TO"
+#                     row[f'perf_is_to_{perf_key2}'] = True
+#                     row[f'perf_to_pattern_{perf_key2}'] = "TO"
+#                     # Add both to marked set to skip them in future comparisons
+#                     marked_perfs.add(perf_key1)
+#                     marked_perfs.add(perf_key2)
+#                     # Break inner loop since perf_key1 now has a TO and should stop being compared
+#                     break
+        
+#         return row
+    
+#     df = df.apply(process_perf_comparisons, axis=1)
+    
+#     # ==================================================================================
+#     # Summary columns - Create overall summary for SE and Performance comparisons
+#     # ==================================================================================
+#     def create_summary(pattern_cols):
+#         """
+#         Create a summary function that aggregates TO patterns across multiple columns.
+#         Priority: TO > TOなし > 比較対象がない
+#         """
+#         def summarize(row):
+#             # Collect all pattern values from the specified columns
+#             values = [row[col] for col in pattern_cols if col in df.columns]
+#             # Return highest priority pattern found
+#             if 'TO' in values:
+#                 return 'TO'  # Highest priority: conflict found
+#             elif 'TOなし' in values:
+#                 return 'TOなし'  # Middle priority: comparison done but no conflict
+#             else:
+#                 return '比較対象がない'  # Lowest priority: cannot compare
+#         return summarize
+    
+#     # SE Summary: Aggregate results from comparing SE variation against all performances
+#     to_pattern_cols = [f'to_pattern_{pk}' for pk in performance_list]
+#     df['se_summary_to_pattern'] = df.apply(create_summary(to_pattern_cols), axis=1)
+    
+#     # Performance Summary: Aggregate results from cross-performance comparisons
+#     perf_to_pattern_cols = [f'perf_to_pattern_{pk}' for pk in performance_list]
+#     df['perf_summary_to_pattern'] = df.apply(create_summary(perf_to_pattern_cols), axis=1)
+    
+#     return df
+
+
+#Kyaw 06/20
+def update_summary_df(df, performance_list):
+    st.write('df summ: ', df)
+    selected_variation = st.session_state.selected_variation
+    allowed_ops = {'<','＜','>','＞','=','＝','≧','≦'}
+    
+    # ==================================================================================
+    # Helper function: Compare two values with their operators
+    # ==================================================================================
+    def compare_values(value1, op1, value2, op2):
+        """
+        Compare two values with their operators to determine if there's a TO conflict.
+        Returns:
+            (None, pattern) - if comparison cannot be made (missing data)
+            (False, pattern) - if no TO found (either "TOなし" or "比較対象がない")
+            (True, "TO") - if TO conflict found
+        """
+        # Validate that both values exist and are valid numbers
+        if (value1 is None or value2 is None or value1 == '' or value2 == '' or 
+            not is_valid_number(value1) or not is_valid_number(value2)):
+            return None, "比較対象がない"
+        
+        # Validate that both operators exist and are in the allowed set
+        if (op1 is None or op1 == '' or op2 is None or op2 == '' or 
+            op1 not in allowed_ops or op2 not in allowed_ops):
+            return None, "比較対象がない"
+        
+        # Convert string values to float for numerical comparison
+        value1f = float(value1)
+        value2f = float(value2)
+        
+        # Check if values have opposite signs (one positive, one negative)
+        # This indicates incompatible requirements that cannot be compared
+        if (value1f < 0 < value2f) or (value2f < 0 < value1f):
+            return False, "比較対象がない"
+        
+        # Perform overlap check to determine if there's a TO conflict
+        # check_overlap returns True if the two conditions overlap (TO conflict)
+        if not check_overlap(op1, value1f, op2, value2f):
+            return False, "TOなし"
+        
+        # TO conflict detected
+        return True, "TO"
+    
+    # ==================================================================================
+    # Part 1: SE comparison - selected_variation vs each performance
+    # ==================================================================================
+    value1_col = f'{selected_variation}_value'
+    op1 = '='  # fixed operator for SE
+    
+    for perf_key in performance_list:
+        # Define column names for this performance's logic value and operator
+        value2_col = f'logic_{perf_key}'
+        op2_col = f'log_condition_{perf_key}'
+        
+        # Skip this performance if any required columns are missing from the dataframe
+        if value1_col not in df.columns or value2_col not in df.columns or op2_col not in df.columns:
+            st.write(f"Skipping {perf_key} due to missing column")
+            continue
+        
+        def row_compare(row, pk=perf_key):
+            """Compare SE variation value against performance logic value."""
+            # Get the SE variation value (value1)
+            value1 = row[value1_col]
+            # Get the performance logic value (value2)
+            value2 = row[f'logic_{pk}']
+            # Get the performance operator
+            op2 = row[f'log_condition_{pk}']
+            # Perform the comparison
+            is_to, pattern = compare_values(value1, op1, value2, op2)
+            # Print comparison details only if result is TO or TOなし (not 比較対象がない)
+            if pattern in ['TO', 'TOなし']:
+                print(f'SE Comparison -> SE variation: {selected_variation}, Performance: {pk}')
+                print(f'  SE value: {value1}, SE op: {op1} | Perf value: {value2}, Perf op: {op2}')
+                print(f'  Result: {pattern}')
+            # Store the pattern result in the dataframe
+            df.at[row.name, f'to_pattern_{pk}'] = pattern
+            # Return boolean result (convert None to False)
+            return is_to if is_to is not None else False
+        
+        def conditional_row_compare(row, pk=perf_key):
+            """Check if is_to value already exists in database, otherwise calculate it."""
+            col_name = f'is_to_{pk}'
+            # If is_to value already exists in the dataframe (from database), use it
+            if col_name in df.columns and pd.notna(row[col_name]):
+                return row[col_name]
+            # Otherwise, calculate it using row_compare
+            return row_compare(row, pk)
+        
+        # Apply the conditional comparison to all rows for this performance
+        # This creates or updates the is_to column for this performance
+        df[f'is_to_{perf_key}'] = df.apply(lambda row: conditional_row_compare(row, perf_key), axis=1)
+    
+    # ==================================================================================
+    # Part 2: Cross-performance comparison (early-exit strategy)
+    # Compare each performance against all other performances to find TO conflicts
+    # ==================================================================================
+    # Initialize result columns for each performance
+    # Preserve database values if they exist (not null), fill nulls with defaults
+    for perf_key in performance_list:
+        perf_is_to_col = f'perf_is_to_{perf_key}'
+        perf_to_pattern_col = f'perf_to_pattern_{perf_key}'
+        
+        # If column doesn't exist, create with defaults
+        if perf_is_to_col not in df.columns:
+            df[perf_is_to_col] = False
+        else:
+            # Column exists from DB - preserve non-null values, fill nulls with default
+            df[perf_is_to_col] = df[perf_is_to_col].fillna(False)
+        
+        if perf_to_pattern_col not in df.columns:
+            df[perf_to_pattern_col] = "比較対象がない"
+        else:
+            # Column exists from DB - preserve non-null values, fill nulls with default
+            df[perf_to_pattern_col] = df[perf_to_pattern_col].fillna("比較対象がない")
+    
+    def process_perf_comparisons(row):
+        """
+        Process cross-performance comparisons for a single row.
+        Early-exit strategy: Once a performance finds a TO conflict, mark both and skip further checks.
+        """
+        # Track which performances have already been identified as having TO conflicts
+        marked_perfs = set()
+        
+        # Iterate through all performance pairs (avoiding duplicates)
+        for i, perf_key1 in enumerate(performance_list):
+
+            # # Skip if DB already provided a value for perf_is_to_{perf_key1}
+            # col1 = f'perf_is_to_{perf_key1}'
+            # if col1 in df.columns and pd.notna(row[col1]):
+            #     print(f'Performance Cross-Comparison -> Perf1: {perf_key1} -> Using existing value from database, skipping comparisons')
+            #     print('row: ', row[col1])
+            #     # Do not process comparisons; keep DB value and pattern
+            #     continue
+
+            # Skip if this performance already has a TO conflict identified in this run
+            if perf_key1 in marked_perfs:
+                continue
+            
+            # # Skip if this performance already has a TO conflict identified
+            # if perf_key1 in marked_perfs:
+            #     continue
+            
+            # Verify required columns exist for this performance
+            if f'logic_{perf_key1}' not in df.columns or f'log_condition_{perf_key1}' not in df.columns:
+                continue
+            
+            # Compare with all subsequent performances (i+1 onwards to avoid duplicate comparisons)
+            for perf_key2 in performance_list[i+1:]:
+
+                # # Skip if DB already provided a value for perf_is_to_{perf_key2}
+                # col2 = f'perf_is_to_{perf_key2}'
+                # if col2 in df.columns and pd.notna(row[col2]):
+                #     print(f'Performance Cross-Comparison -> Perf1: {perf_key1} vs Perf2: {perf_key2} -> Using existing value from database, skipping comparisons')
+                #     continue
+
+                # Skip if this performance already has a TO conflict identified in this run
+                if perf_key2 in marked_perfs:
+                    continue
+
+                # # Skip if second performance already has a TO conflict identified
+                # if perf_key2 in marked_perfs:
+                #     continue
+                
+                # Verify required columns exist for second performance
+                if f'logic_{perf_key2}' not in df.columns or f'log_condition_{perf_key2}' not in df.columns:
+                    continue
+                
+                # Extract logic values and operators for both performances
+                value1 = row[f'logic_{perf_key1}']
+                op1_perf = row[f'log_condition_{perf_key1}']
+                value2 = row[f'logic_{perf_key2}']
+                op2_perf = row[f'log_condition_{perf_key2}']
+                
+                # Compare the two performances using the helper function
+                is_to, pattern = compare_values(value1, op1_perf, value2, op2_perf)
+                
+                if is_to is None:
+                    # Cannot perform comparison (missing data or invalid operators) - skip to next pair
+                    # Don't print 比較対象がない cases
+                    continue
+                elif is_to is False:
+                    # No TO conflict found - update pattern if it hasn't been set yet
+                    # Only overwrite the default "比較対象がない" message
+                    # Print only if pattern is TOなし (not 比較対象がない)
+                    if pattern == 'TOなし':
+                        print(f'Performance Cross-Comparison -> Perf1: {perf_key1} vs Perf2: {perf_key2}')
+                        print(f'  Perf1 value: {value1}, Perf1 op: {op1_perf} | Perf2 value: {value2}, Perf2 op: {op2_perf}')
+                        print(f'  Result: {pattern}')
+                    if row[f'perf_to_pattern_{perf_key1}'] == "比較対象がない":
+                        row[f'perf_to_pattern_{perf_key1}'] = pattern
+                    if row[f'perf_to_pattern_{perf_key2}'] == "比較対象がない":
+                        row[f'perf_to_pattern_{perf_key2}'] = pattern
+                    continue
+                else:
+                    # TO conflict found! Print the details
+                    print(f'Performance Cross-Comparison -> Perf1: {perf_key1} vs Perf2: {perf_key2}')
+                    print(f'  Perf1 value: {value1}, Perf1 op: {op1_perf} | Perf2 value: {value2}, Perf2 op: {op2_perf}')
+                    print(f'  Result: *** TO CONFLICT DETECTED ***')
+                    # TO conflict found! Mark both performances
+                    row[f'perf_is_to_{perf_key1}'] = True
+                    row[f'perf_to_pattern_{perf_key1}'] = "TO"
+                    row[f'perf_is_to_{perf_key2}'] = True
+                    row[f'perf_to_pattern_{perf_key2}'] = "TO"
+                    # Add both to marked set to skip them in future comparisons
+                    marked_perfs.add(perf_key1)
+                    marked_perfs.add(perf_key2)
+                    # Break inner loop since perf_key1 now has a TO and should stop being compared
+                    break
+        
+        return row
+    
+    df = df.apply(process_perf_comparisons, axis=1)
+    
+    # ==================================================================================
+    # Summary columns - Create overall summary for SE and Performance comparisons
+    # ==================================================================================
+    def create_summary(pattern_cols):
+        """
+        Create a summary function that aggregates TO patterns across multiple columns.
+        Priority: TO > TOなし > 比較対象がない
+        """
+        def summarize(row):
+            # Collect all pattern values from the specified columns
+            values = [row[col] for col in pattern_cols if col in df.columns]
+            # Return highest priority pattern found
+            if 'TO' in values:
+                return 'TO'  # Highest priority: conflict found
+            elif 'TOなし' in values:
+                return 'TOなし'  # Middle priority: comparison done but no conflict
+            else:
+                return '比較対象がない'  # Lowest priority: cannot compare
+        return summarize
+    
+    # SE Summary: Aggregate results from comparing SE variation against all performances
+    to_pattern_cols = [f'to_pattern_{pk}' for pk in performance_list]
+    df['se_summary_to_pattern'] = df.apply(create_summary(to_pattern_cols), axis=1)
+    
+    # Performance Summary: Aggregate results from cross-performance comparisons
+    perf_to_pattern_cols = [f'perf_to_pattern_{pk}' for pk in performance_list]
+    df['perf_summary_to_pattern'] = df.apply(create_summary(perf_to_pattern_cols), axis=1)
+    
+    return df
+
+
+
 
 def c_grid(filter):
     
     # print('c df before: ', datetime.datetime.now())
-    df = st.session_state.rfl_list
+    # df = st.session_state.rfl_list
+    df = st.session_state.rfl_matrix #telema-kyaw
     # print('c df after: ', datetime.datetime.now())
     # df1 = df[['c_r_wp','c_r_item_2', 'c_l_item', 'c_l_wp', 'c_logic','c_r_scene','c_l_scene']]
-    df1 = df[['c_r_wp','c_r_item_2', 'c_l_item', 'c_l_wp', 'c_logic','c_r_scene','c_l_scene','c_log_condition']] #チョー 05/19
+    # df1 = df[['c_r_wp','c_r_item_2', 'c_l_item', 'c_l_wp', 'c_logic','c_r_scene','c_l_scene','c_log_condition']] #チョー 05/19
+    df1 = df[['c_r_wp','c_r_item_2', 'c_l_item', 'c_l_wp', 'c_logic','c_r_scene','c_l_scene','c_log_condition','c_to_pattern']] #Kyaw 06/20
+
     df1 = df1[df1['c_r_wp'].notna()]
     df1['c_logic_c_condition'] = df1['c_log_condition'].replace('', None).fillna('') +  df1['c_logic'].replace('', None).fillna('')#チョー 05/19 c_logic,c_log_conditionをs_logic_s_conditionに入れる
 
@@ -282,7 +801,7 @@ def c_grid(filter):
         {'field': 'c_l_item', 'rowGroup': True, 'suppressMovable': True, 'columnGroupShow': 'never'}, 
         # {'field': 'c_logic', 'headerName':'Value','aggFunc': 'firstNotNull', 'suppressMovable': True}, #Ha-san 0221: add aggregation function as default
         {'field': 'c_logic_c_condition', 'headerName':'Value','aggFunc': 'firstNotNull', 'suppressMovable': True}, #チョー 05/19
-
+        {'field': 'c_to_pattern', 'headerName':'TO状況','aggFunc': 'firstNotNull','suppressMovable': True}, #Kyaw 06/20
     ]
 
 
@@ -320,10 +839,12 @@ def c_grid(filter):
 
 def s_grid(filter):
 
-    df = st.session_state.rfl_list
+    # df = st.session_state.rfl_list
+    df = st.session_state.rfl_matrix #telema-kyaw
     # st.write('s: ', df)
     # df2 = df[['s_r_wp','s_r_item_2', 's_l_item', 's_l_wp', 's_logic','s_r_scene','s_l_scene']]
-    df2 = df[['s_r_wp','s_r_item_2', 's_l_item', 's_l_wp', 's_logic','s_r_scene','s_l_scene','s_log_condition']] #チョー 05/19
+    # df2 = df[['s_r_wp','s_r_item_2', 's_l_item', 's_l_wp', 's_logic','s_r_scene','s_l_scene','s_log_condition']] #チョー 05/19
+    df2 = df[['s_r_wp','s_r_item_2', 's_l_item', 's_l_wp', 's_logic','s_r_scene','s_l_scene','s_log_condition','s_to_pattern']] #Kyaw 06/20
     df2 = df2[df2['s_r_wp'].notna()]
     df2['s_logic_s_condition'] = df2['s_log_condition'].replace('', None).fillna('') + df2['s_logic'].replace('', None).fillna('') #チョー 05/19 s_logic,s_log_conditionをs_logic_s_conditionに入れる
 
@@ -347,6 +868,7 @@ def s_grid(filter):
         # {'field': 's_logic', 'headerName':'', 'aggFunc': 'first', 'suppressMovable': True}
         # {'field': 's_logic', 'headerName':'Value','aggFunc': 'firstNotNull', 'suppressMovable': True} #Ha-san 0221: add aggregation function as default
         {'field': 's_logic_s_condition', 'headerName':'Value','aggFunc': 'firstNotNull', 'suppressMovable': True}, #チョー 05/19
+        {'field': 's_to_pattern', 'headerName':'TO状況','aggFunc': 'firstNotNull', 'suppressMovable': True}, #Kyaw 06/20
     ]
     
     grid_options = {     
@@ -375,10 +897,11 @@ def s_grid(filter):
 
 def u_grid(filter):
 
-    df = st.session_state.rfl_list
-    
+    # df = st.session_state.rfl_list
+    df = st.session_state.rfl_matrix #telema-kyaw
     # df3 = df[['u_r_wp','u_r_item_2', 'u_l_item', 'u_l_wp', 'u_logic','u_r_scene','u_l_scene']].dropna()
-    df3 = df[['u_r_wp','u_r_item_2', 'u_l_item', 'u_l_wp', 'u_logic','u_r_scene','u_l_scene','u_log_condition']]
+    # df3 = df[['u_r_wp','u_r_item_2', 'u_l_item', 'u_l_wp', 'u_logic','u_r_scene','u_l_scene','u_log_condition']]
+    df3 = df[['u_r_wp','u_r_item_2', 'u_l_item', 'u_l_wp', 'u_logic','u_r_scene','u_l_scene','u_log_condition','u_to_pattern']] #Kyaw 06/20
  
     # st.write('u: ', df2)
     df3 = df3[df3['u_r_wp'].notna()]
@@ -402,6 +925,7 @@ def u_grid(filter):
         # {'field': 'u_logic', 'aggFunc': 'count', 'suppressMovable': True}
         # {'field': 'u_logic', 'headerName':'Value', 'aggFunc': 'firstNotNull', 'suppressMovable': True} #Ha-san 0221: add aggregation function as default
         {'field': 'u_logic_u_condition', 'headerName':'Value','aggFunc': 'firstNotNull', 'suppressMovable': True}, #チョー 05/19
+        {'field': 'u_to_pattern', 'headerName':'TO状況','aggFunc': 'firstNotNull', 'suppressMovable': True}, #Kyaw 06/20
     ]
 
     # df2
@@ -435,7 +959,7 @@ def u_grid(filter):
 def set_filter_state(filter_keys, grid_functions, button_txt, label_txt):
     """Sets the filter state and calls the corresponding grid functions with Japanese button label."""
     filter_btn = st.button(button_txt)
-    st.write(f'{label_txt}：')
+    #st.write(f'{label_txt}：')
     if filter_btn:
         for filter_key in filter_keys:
             st.session_state[filter_key] = True
@@ -460,6 +984,12 @@ def main():
         st.session_state.flag_summary_before = False
     filter_keys = ['filter_c', 'filter_s', 'filter_u']
 
+    #チョー 
+    if st.session_state.rerun_rfl_to:
+        # print("rerun rfl")
+        st.session_state.rerun_rfl_to = False
+        st.rerun()
+
     # Ensure all necessary filter keys exist in session_state
     for key in filter_keys:
         if key not in st.session_state:
@@ -473,6 +1003,7 @@ def main():
                 if 'df_display_on_summary' in st.session_state:#サマリーモードでのみ使用するsession_stateは戻る押したら削除する
                     del st.session_state.df_display_on_summary
                     del st.session_state.selected_variation
+                    
             back_to_SPDM_LIST()
     with col8:
         st.session_state.flag_summary=st.toggle('サマリーモード', key='summary_toggle', value=st.session_state.flag_summary_before)
@@ -480,6 +1011,7 @@ def main():
         if 'df_display_on_summary' in st.session_state:#サマリーモードでのみ使用するsession_stateは詳細に戻ったら削除する
             del st.session_state.df_display_on_summary
             del st.session_state.selected_variation
+            
 
         with col2:
             if st.button("車両→システム"):
@@ -516,12 +1048,14 @@ def main():
 
 
         #必要なSE情報の取得,postgre_get_dateが使えるかな、そもそもdatastuck持ってる？持っていないときもあるのかじゃあ絶対必要だね
+        
         variations = st.session_state['selectoption6']
         
         #variationを選択させるselectboxを設置する 4/4 se_data_stuck でつける列名がバリエーション名からIDに変わったことにより、ここでも名前そのものでなく番号変換が必要になる 8/5
-        
+        #8/6 selected_variationはIDでも名前でもほしい、どちらも変数用意する
         with col7:
-            selected_variation = st.session_state.prj_info_list[st.session_state.prj_info_list['variation']==st.selectbox('', options=variations, key='select_variation')]['variation_id'].tolist()[0]
+            selected_variation = st.selectbox('', options=variations, key='select_variation')
+            selected_variation_id = st.session_state.prj_info_list[st.session_state.prj_info_list['variation']==selected_variation]['variation_id'].tolist()[0]
         if 'selected_variation' not in st.session_state or selected_variation != st.session_state.selected_variation:
             st.session_state.selected_variation = selected_variation
             if 'df_display_on_summary' in st.session_state :
@@ -548,11 +1082,15 @@ def main():
                     st.session_state['selectoption5']
                 )
                 
-            st.session_state.rfl_list = df1
-        df_rfl_data = st.session_state.rfl_list.copy()
+            # st.session_state.rfl_list = df1
+            st.session_state.rfl_matrix = df1 #telema-kyaw
+        st.write('rfl_matrix: ', st.session_state.rfl_matrix)
+        df_rfl_data = st.session_state.rfl_matrix.copy() #telema-kyaw
         df_rfl_performance_c = df_rfl_data.loc[:, 'c_r_wp']
         df_rfl_performance_s = df_rfl_data.loc[:, 's_r_wp']
-        df_rfl_performance = pd.concat([df_rfl_performance_c, df_rfl_performance_s])
+        df_rfl_performance_u = df_rfl_data.loc[:, 'u_r_wp']#山口　ユニット版を用意してみる。　9/29
+        
+        df_rfl_performance = pd.concat([df_rfl_performance_c, df_rfl_performance_s, df_rfl_performance_u])
         performance_list = df_rfl_performance.drop_duplicates().dropna().values.tolist()
         performance_list = [x for x in performance_list if x not in ['PWT(燃費電費)','PWT']]
         if 'df_display_on_summary' not in st.session_state:
@@ -590,18 +1128,11 @@ def main():
             df_se_unit  = df_se_data.loc[:, se_unit_col[0]]
             #各バリエーションごとの列を取得
             #山口　全Veriationではなく、ユーザー選択で列を選ばせる
-            
-            se_variation_col = df_se_data.loc[:, df_se_data.columns.str.contains(';z_wp_name_get_str;') & df_se_data.columns.str.contains(str(selected_variation), regex=False) ].columns #
-            se_value_col = df_se_data.loc[:, df_se_data.columns.str.contains(';z_request_median;') & df_se_data.columns.str.contains(str(selected_variation), regex=False)].columns #山口　regex=Falseにしないと、Variation名に正規表現記号が入ってきたときに正しく判定できない。4/10
+            se_variation_col = df_se_data.loc[:, df_se_data.columns.str.contains(';z_wp_name_get_str;') & df_se_data.columns.str.contains(str(selected_variation_id), regex=False) ].columns #
+            se_value_col = df_se_data.loc[:, df_se_data.columns.str.contains(';z_request_median;') & df_se_data.columns.str.contains(str(selected_variation_id), regex=False)].columns #山口　regex=Falseにしないと、Variation名に正規表現記号が入ってきたときに正しく判定できない。4/10
             
             df_se_variation = df_se_data.loc[:, se_variation_col]
             df_se_value = df_se_data.loc[:, se_value_col]
-            # st.write(df_se_data.loc[:, df_se_data.columns.str.contains(selected_variation)])
-            # st.write("G仕様(BAT88)")
-            # st.write(pd.DataFrame(['aaa'], columns=["G仕様(BAT88)"]).columns)
-            # st.write(pd.DataFrame(['aaa'], columns=["G仕様(BAT88)"]).columns.str.contains("G仕様(BAT88)", regex=False)) im mad
-            # st.write(df_se_variation)
-            # st.write(df_se_value)
             df_se_info = pd.concat([df_se_parameter_id, df_se_parent, df_se_child, df_se_unit, df_se_variation, df_se_value], axis=1)
             
             df_se_info.rename(columns={df_se_info.columns[0]:'se_parameter_id', df_se_info.columns[1]:'parameter_name_1', df_se_info.columns[2]:'parameter_name_2', df_se_info.columns[3]:'parameter_unit'}, inplace=True)
@@ -626,27 +1157,66 @@ def main():
             # 性能リストの数横連結しないと
             df_rfl_info = None
             for i, performance in enumerate(performance_list):
+                df_rfl_by_performance_c = None
+                df_rfl_by_performance_s = None
+                df_rfl_by_performance_u = None
                 #TODO ほんとに全部c_r_wpでいいんだっけ？確認する
-                df_rfl_by_performance_c = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['c_r_pj_id', 'c_phase_id', 'c_rfl_id','c_r_wp', 'c_related_se_parameter_id', 'c_logic', 'c_l_scene', 'c_flag_to', 'c_to_solving_value', 'c_flag_display_on_summary_logic' ]]
-                df_rfl_by_performance_s = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['s_r_pj_id', 's_phase_id', 's_rfl_id','c_r_wp', 's_related_se_parameter_id', 's_logic', 's_l_scene', 's_flag_to', 's_to_solving_value', 's_flag_display_on_summary_logic']]
-                df_rfl_by_performance_u = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','c_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic']]
-                df_rfl_by_performance_c.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
-                df_rfl_by_performance_s.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
-                df_rfl_by_performance_u.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
-                df_rfl_by_performance = pd.concat([df_rfl_by_performance_c,df_rfl_by_performance_s,df_rfl_by_performance_u])
+                # df_rfl_by_performance_c = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['c_r_pj_id', 'c_phase_id', 'c_rfl_id','c_r_wp', 'c_related_se_parameter_id', 'c_logic', 'c_l_scene', 'c_flag_to', 'c_to_solving_value', 'c_flag_display_on_summary_logic' ]]
+                # df_rfl_by_performance_s = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['s_r_pj_id', 's_phase_id', 's_rfl_id','c_r_wp', 's_related_se_parameter_id', 's_logic', 's_l_scene', 's_flag_to', 's_to_solving_value', 's_flag_display_on_summary_logic']]
+                # df_rfl_by_performance_u = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','c_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic']]
+                
+                # df_rfl_by_performance_c.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
+                # df_rfl_by_performance_s.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
+                # df_rfl_by_performance_u.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
+                
+                #Kyaw 06/20
+                df_rfl_by_performance_c = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['c_r_pj_id', 'c_phase_id', 'c_rfl_id','c_r_wp', 'c_related_se_parameter_id', 'c_logic', 'c_l_scene', 'c_flag_to', 'c_to_solving_value', 'c_flag_display_on_summary_logic','c_log_condition','c_is_to','c_to_pattern','c_perf_is_to','c_perf_to_pattern']] #kyaw-rfl
+                df_rfl_by_performance_s = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['s_r_pj_id', 's_phase_id', 's_rfl_id','c_r_wp', 's_related_se_parameter_id', 's_logic', 's_l_scene', 's_flag_to', 's_to_solving_value', 's_flag_display_on_summary_logic','s_log_condition','s_is_to','s_to_pattern','s_perf_is_to','s_perf_to_pattern']]
+                df_rfl_by_performance_u = df_rfl_data[df_rfl_data['c_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','c_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic','u_log_condition','u_is_to','u_to_pattern','u_perf_is_to','u_perf_to_pattern']]
+                
+                df_rfl_by_performance_c.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value','log_condition','is_to','to_pattern','perf_is_to','perf_to_pattern'] #kyaw-rfl
+                df_rfl_by_performance_s.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value','log_condition','is_to','to_pattern','perf_is_to','perf_to_pattern']
+                df_rfl_by_performance_u.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value','log_condition','is_to','to_pattern','perf_is_to','perf_to_pattern']
+                
+                df_rfl_by_performance_remain = df_rfl_data[df_rfl_data['c_r_wp'].isna()]
                 
                 
                 # st.write(len(df_rfl_by_performance_c))
-                if len(df_rfl_by_performance_c)==0:#車両階層のないRFLはこのループに入る
-                    df_rfl_by_performance_s = df_rfl_data[df_rfl_data['s_r_wp']==performance].loc[:, ['s_r_pj_id', 's_phase_id', 's_rfl_id','s_r_wp', 's_related_se_parameter_id', 's_logic', 's_l_scene', 's_flag_to', 's_to_solving_value', 's_flag_display_on_summary_logic']]
-                    df_rfl_by_performance_u = df_rfl_data[df_rfl_data['s_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','s_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic']]
-                    df_rfl_by_performance_s.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
-                    df_rfl_by_performance_u.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
-                    df_rfl_by_performance = pd.concat([df_rfl_by_performance_s,df_rfl_by_performance_u])
+                #if len(df_rfl_by_performance_c)==0:#車両階層のないRFLはこのループに入る <-if文をこのように書くと車両があるけどシステムから発生するものもある場合に対応できなくなる
+                    # df_rfl_by_performance_s = df_rfl_data[df_rfl_data['s_r_wp']==performance].loc[:, ['s_r_pj_id', 's_phase_id', 's_rfl_id','s_r_wp', 's_related_se_parameter_id', 's_logic', 's_l_scene', 's_flag_to', 's_to_solving_value', 's_flag_display_on_summary_logic']]
+                    # df_rfl_by_performance_u = df_rfl_data[df_rfl_data['s_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','s_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic']]
+                    # df_rfl_by_performance_s.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
+                    # df_rfl_by_performance_u.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value']
                     
+                #Kyaw 06/20　山口　車両あるないにかかわらずシステムから発生するRFLをとるように処理変更
                 
+                df_rfl_by_performance_ss = df_rfl_by_performance_remain[df_rfl_by_performance_remain['s_r_wp']==performance].loc[:, ['s_r_pj_id', 's_phase_id', 's_rfl_id','s_r_wp', 's_related_se_parameter_id', 's_logic', 's_l_scene', 's_flag_to', 's_to_solving_value', 's_flag_display_on_summary_logic','s_log_condition','s_is_to','s_to_pattern','s_perf_is_to','s_perf_to_pattern']]
+                df_rfl_by_performance_ss.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value','log_condition','is_to','to_pattern','perf_is_to','perf_to_pattern']
+                if df_rfl_by_performance_s is None:
+                    df_rfl_by_performance_s = df_rfl_by_performance_ss
+                else:
+                    df_rfl_by_performance_s = pd.concat([df_rfl_by_performance_s, df_rfl_by_performance_ss])
+                
+                    
+                df_rfl_by_performance_su = df_rfl_by_performance_remain[df_rfl_by_performance_remain['s_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','s_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic','u_log_condition','u_is_to','u_to_pattern','u_perf_is_to','u_perf_to_pattern']]
+                df_rfl_by_performance_su.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value','log_condition','is_to','to_pattern','perf_is_to','perf_to_pattern']
+                if df_rfl_by_performance_u is None:
+                    df_rfl_by_performance_u = df_rfl_by_performance_su
+                else:
+                    df_rfl_by_performance_u = pd.concat([df_rfl_by_performance_u, df_rfl_by_performance_su])
+                #車両システムがなくユニットがある場合の処理を追加　山口　9/29
+                df_rfl_by_performance_remain_remain = df_rfl_by_performance_remain[df_rfl_by_performance_remain['s_r_wp'].isna()]
+                
+                df_rfl_by_performance_uu = df_rfl_by_performance_remain_remain[df_rfl_by_performance_remain_remain['u_r_wp']==performance].loc[:, ['u_r_pj_id', 'u_phase_id', 'u_rfl_id','s_r_wp', 'u_related_se_parameter_id', 'u_logic', 'u_l_scene', 'u_flag_to', 'u_to_solving_value', 'u_flag_display_on_summary_logic','u_log_condition','u_is_to','u_to_pattern','u_perf_is_to','u_perf_to_pattern']]
+                df_rfl_by_performance_uu.columns = ['project_id', 'phase_id', 'rfl_id','performance', 'related_se_parameter_id', 'logic', 'scene', 'flag_to', 'to_solving_value', 'flag_display_on_summary_value','log_condition','is_to','to_pattern','perf_is_to','perf_to_pattern']
+                if df_rfl_by_performance_u is None:
+                    df_rfl_by_performance_u = df_rfl_by_performance_uu
+                else:
+                    df_rfl_by_performance_u = pd.concat([df_rfl_by_performance_u, df_rfl_by_performance_uu])
+                #st.write('each dfs', df_rfl_by_performance_c, df_rfl_by_performance_s, df_rfl_by_performance_u)
+                df_rfl_by_performance = pd.concat([df_rfl_by_performance_c,df_rfl_by_performance_s,df_rfl_by_performance_u])
                 df_rfl_by_performance.columns = df_rfl_by_performance.columns + '_' + performance# st.write(df_rfl_by_performance_c)
-                
+                #st.write(df_rfl_by_performance)
 
                 #山口　URLがあった時の処理、httpから始まる文字列がある場合にそれを分割して新規列に格納する 4/17
                 df_logic_url_split = df_rfl_by_performance['logic_' + performance].str.split('http', expand=True)
@@ -696,9 +1266,9 @@ def main():
             df_se_info = st.session_state.df_display_on_summary
         df_to_summary = df_se_info.copy()
         df_to_summary.drop_duplicates(subset=['se_parameter_id', 'logic_concat'], inplace=True)
-        # st.write(df_rfl_data)
+        
         #山口 サマリ専用昨日たちの整列 4/14
-        summary_col1, summary_col2, summary_col3 = st.columns([1,1,10])
+        summary_col1, summary_col2, summary_col3, summary_col4 = st.columns([1,1,1,10])
         #サマリー表示行を編集さセルための機能追加
         with summary_col1:
                 #dia.select_display_on_summary() 山口　ここに置くとAggridに通す前のDFを対象に変更をかけてしまう。ここではフラグを立てるにとどめてグリッド表示後に実行する
@@ -722,6 +1292,10 @@ def main():
         
         #st-aggridでspanningできないので、df_to_summaryを直接いじる
         df_to_summary.loc[df_to_summary['parameter_name_1'] == df_to_summary['parameter_name_1'].shift(),'parameter_name_1'] = ''
+
+        df_to_summary = update_summary_df(df_to_summary, performance_list)
+
+        st.write('df_to_summary:: ', df_to_summary)
 
         #########
         #ステートメントの表示をする
@@ -829,6 +1403,7 @@ def main():
             'rowHeight': 50,
             'headerHeight':50,
             'enableRangeSelection':True,
+            'getRowStyle': summaryTredeOffBGcolor,
 
         }
         #seのvariationごとにcolumnDefs追加
@@ -840,6 +1415,27 @@ def main():
                             }
             
         go_to_summary['columnDefs'].append(se_column_def)
+        #Kyaw 06/20
+        se_summary_to_pattern = {'headerName':f'仕様と割付成立性​',
+                              'field':'se_summary_to_pattern', 
+                              'headerClass':'se_to_summary', 
+                              'cellStyle':BGcolorRenderer,
+                              'editable': EditableValue,  
+                              'wrapText': True,
+                              'width':300
+                              }
+        go_to_summary['columnDefs'].append(se_summary_to_pattern)
+        
+        # Performance cross-comparison TO status
+        perf_summary_to_pattern = {'headerName':f'TO判定',
+                              'field':'perf_summary_to_pattern', 
+                              'headerClass':'se_to_summary', 
+                              'cellStyle':BGcolorRenderer,
+                              'editable': EditableValue,  
+                              'wrapText': True,
+                              'width':180
+                              }
+        go_to_summary['columnDefs'].append(perf_summary_to_pattern)
         #R性能ごとにcolumnDefs追加
         for performance in performance_list:
             # st.write(performance)
@@ -848,6 +1444,7 @@ def main():
                               'headerClass':'requirements_to_summary', 
                               'cellStyle':BGcolorRenderer,
                               'editable': EditableValue,  
+                              'tooltipField': f'to_pattern_{performance}', #Kyaw 06/20
                               'wrapText': True}
             rfl_flag_to_column_def = {
                               'headerName':'flag_to_' + performance,
@@ -880,8 +1477,8 @@ def main():
             go_to_summary['columnDefs'].append(rfl_to_solving_value_column_def)
 
         #テスト用
-        # df_to_summary['flag_to_動力'] = 1    
-        # st.write(df_to_summary)
+        # df_to_summary['flag_to_動力'] = 1  
+        
         ag_edited = AgGrid(df_to_summary,go_to_summary,
                 custom_css=css_ag,
                 height=1000,
@@ -918,7 +1515,44 @@ def main():
             if df_selecteds is not None:
                 dia.update_rfl_by_to_summary(df_selecteds)
             
-            
+        with summary_col4:
+            if st.button('TO自動判定結果保存'):
+
+                results = []
+
+                for idx, row in df_edited.iterrows():
+                    for perf in performance_list:
+                        flag_col = f'flag_selected_{perf}'
+                        if flag_col in df_edited.columns and row.get(flag_col, False):
+                            cols_for_perf = [f'project_id_{perf}', f'phase_id_{perf}', f'rfl_id_{perf}', 'parameter_name_2',f'logic_{perf}',f'is_to_{perf}', f'to_pattern_{perf}', f'perf_is_to_{perf}', f'perf_to_pattern_{perf}', flag_col,'se_summary_to_pattern','perf_summary_to_pattern']
+                            cols_for_perf = [c for c in cols_for_perf if c in df_edited.columns]
+
+                            # Extract data
+                            selected_data = row[cols_for_perf].to_dict()
+
+                            # Remove suffix from keys
+                            renamed_data = {}
+                            for k, v in selected_data.items():
+                                # Remove _perf suffix (like _aaa or _燃費電費)
+                                new_key = re.sub(f'_{re.escape(perf)}$', '', k)
+                                renamed_data[new_key] = v
+
+                            # Skip if any key is null
+                            if any(pd.isna(renamed_data.get(k)) for k in ['project_id', 'phase_id', 'rfl_id']):
+                                continue
+
+                            # Add extra info
+                            # renamed_data['row_index'] = idx
+                            renamed_data['performance'] = perf
+
+                            results.append(renamed_data)
+
+                rfl_summary_df_selected = pd.DataFrame(results)
+
+                if not rfl_summary_df_selected.empty:
+                    dia.update_summary_to_result(rfl_summary_df_selected)
+                else:
+                    dia.error_test()    
 
 
 
@@ -930,4 +1564,5 @@ def main():
 
      
 if __name__ == "__main__":
+
     main()

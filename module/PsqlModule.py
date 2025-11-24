@@ -7,7 +7,6 @@ import const.constpara as co
 from sqlalchemy import create_engine, text
 import datetime
 import streamlit as st
-import math #山口　nanの判定を行うため追加7/23
 import itertools #山口　DFの処理を楽にしたく追加 1/28
 class psql_class:
 
@@ -18,11 +17,11 @@ class psql_class:
     def create_connection(self):
         try:
             connection = psycopg2.connect(
-                dbname = "SPDM_2",
-                user = "postgres",
-                password = "SQL123456",
-                host = "localhost",
-                port = "5432"
+                dbname="SPDM_5",
+                user="postgres",
+                password="SQL123456",
+                host="localhost",
+                port="5433"
             )
             
             return connection
@@ -437,8 +436,273 @@ class psql_class:
                 return []
         else:
             return []
+        
+    #07/07 Kyaw
+    def get_se_proj_info_query(self,select_list_str,select_list_str2,select_list_str3,select_list_str4,select_list_str5):
+        connection = self.conn
+        query = f"""
+                SELECT DISTINCT on (se.z_prj_number,
+					se.z_name,
+					se.z_class_name_get_str,
+					se.z_wp_name_get_str,
+                   	se.z_destination,
+					se.z_drive_system,
+					wp_order, modified_string)
+					se.z_prj_number,
+					se.z_name,
+					se.z_class_name_get_str,
+					se.project_id,                                                                      
+                    se.se_parameter_id,    
+                    se.phase_id,         
+                    se.variation_id,
+                    va.variation,
+					se.z_wp_name_get_str,
+                   	se.z_destination,
+					se.z_drive_system,
+                    pjf.project_code,
+					CASE 
+	                    WHEN detail.update_day IS NOT NULL THEN LEFT(CAST(detail.update_day AS VARCHAR), 10) 
+	                    ELSE NULL 
+	                END as update_day,
+	                CONCAT(user_table.section_code, ' ', user_table.contac_person_first_name, ' ',user_table.contac_person_last_name) as edited_user,
+	                approve.state_name,
+	                detail.user_memo,
+                    CASE 
+						WHEN se.z_wp_name_get_str ~ '\d' THEN CAST(regexp_replace(se.z_wp_name_get_str, '\D', '', 'g') AS INTEGER)
+					END AS wp_order,
+                    replace(se.z_wp_name_get_str,'Variation#', '') AS modified_string
+                FROM se_project_record_plz as se
+                INNER JOIN project_info AS pjf on se.project_id = pjf.id
+                INNER JOIN phase as ph on ph.id = se.phase_id
+                INNER JOIN variation va on va.id = se.variation_id
+				inner join
+					(select distinct on (z_paravalueid) * from detail_data order by z_paravalueid, update_day desc) as detail
+                on 
+                    se.z_paravalueid = detail.z_paravalueid
+                left outer join
+	                user_table 
+	            on
+	                detail.employee_number = user_table.employee_number
+	            inner join
+	                approval_status_table as approve
+	            on
+	                detail.approval_status = approve.state_key
+                WHERE pjf.project_code IN ({select_list_str})
+                AND se.z_destination IN ({select_list_str2})
+                AND se.z_drive_system IN ({select_list_str3})
+                AND se.z_name IN ({select_list_str4})
+                AND ph.phase IN ({select_list_str5})
+                AND se.z_class_name_get_str IS NOT NULL
+                AND se.z_class_name_get_str <> ''
+                ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;"""
 
-# CAST(REPLACE(SUBSTRING(se.z_wp_name_get_str FROM POSITION('#' IN se.z_wp_name_get_str) + 1), '-', '') AS INTEGER) 
+        prj_info_list = pd.read_sql_query(query, connection)
+        variation_unique = prj_info_list['variation'].drop_duplicates().tolist() 
+        st.session_state['selectoption6'] = variation_unique
+        print('query::', query)
+        return prj_info_list
+        
+
+# # CAST(REPLACE(SUBSTRING(se.z_wp_name_get_str FROM POSITION('#' IN se.z_wp_name_get_str) + 1), '-', '') AS INTEGER) 
+#     def posgre_get_date(self, select_list = [], select_list2 = [], select_list3 = [],select_list4 = [],select_list5 = []):#山口 ログ残し追加 12/3
+#         connection = self.conn
+#         select_list_str = ', '.join(f"'{item}'" for item in select_list)
+#         select_list_str2 = ', '.join(f"'{item}'" for item in select_list2)
+#         select_list_str3 = ', '.join(f"'{item}'" for item in select_list3)
+#         select_list_str4 = ', '.join(f"'{item}'" for item in select_list4)
+#         select_list_str5 = ', '.join(f"'{item}'" for item in select_list5)
+#         self.set_condition_log(select_list_str, select_list_str2, select_list_str3, 'Null', st.session_state.username)
+#         #山口　ロット情報ほしいためここで追加10/09
+#         #山口　日付、更新者、ステータスも欲しい10/10
+#         #山口　テーブル分割に伴い編集10/21
+#         #山口　z_lot必要なし？
+#         #山口　新しいUIでほぼ確実に最初はこの関数でのデータ取得を行うようになった、なのでこの中でVariationもsession_stateに記録しておく
+#         # query = f"""
+#         #         SELECT DISTINCT on (se.z_prj_number,
+# 		# 			se.z_name,
+# 		# 			se.z_class_name_get_str,
+# 		# 			se.z_wp_name_get_str,
+#         #            	se.z_destination,
+# 		# 			se.z_drive_system,
+# 		# 			wp_order, modified_string)
+# 		# 			se.z_prj_number,
+# 		# 			se.z_name,
+# 		# 			se.z_class_name_get_str,
+# 		# 			se.project_id,                                                                      
+#         #             se.se_parameter_id,    
+#         #             se.phase_id,         
+#         #             se.variation_id,
+#         #             va.variation,
+# 		# 			se.z_wp_name_get_str,
+#         #            	se.z_destination,
+# 		# 			se.z_drive_system,
+#         #             pjf.project_code,
+# 		# 			CASE 
+# 	    #                 WHEN detail.update_day IS NOT NULL THEN LEFT(CAST(detail.update_day AS VARCHAR), 10) 
+# 	    #                 ELSE NULL 
+# 	    #             END as update_day,
+# 	    #             CONCAT(user_table.section_code, ' ', user_table.contac_person_first_name, ' ',user_table.contac_person_last_name) as edited_user,
+# 	    #             approve.state_name,
+# 	    #             detail.user_memo,
+#         #             CASE 
+# 		# 				WHEN se.z_wp_name_get_str ~ '\d' THEN CAST(regexp_replace(se.z_wp_name_get_str, '\D', '', 'g') AS INTEGER)
+# 		# 			END AS wp_order,
+#         #             replace(se.z_wp_name_get_str,'Variation#', '') AS modified_string
+#         #         FROM se_project_record_plz as se
+#         #         INNER JOIN project_info AS pjf on se.project_id = pjf.id
+#         #         INNER JOIN phase as ph on ph.id = se.phase_id
+#         #         INNER JOIN variation va on va.id = se.variation_id
+# 		# 		inner join
+# 		# 			(select distinct on (z_paravalueid) * from detail_data order by z_paravalueid, update_day desc) as detail
+#         #         on 
+#         #             se.z_paravalueid = detail.z_paravalueid
+#         #         left outer join
+# 	    #             user_table 
+# 	    #         on
+# 	    #             detail.employee_number = user_table.employee_number
+# 	    #         inner join
+# 	    #             approval_status_table as approve
+# 	    #         on
+# 	    #             detail.approval_status = approve.state_key
+#         #         WHERE pjf.project_code IN ({select_list_str})
+#         #         AND se.z_destination IN ({select_list_str2})
+#         #         AND se.z_drive_system IN ({select_list_str3})
+#         #         AND se.z_name IN ({select_list_str4})
+#         #         AND ph.phase IN ({select_list_str5})
+#         #         AND se.z_class_name_get_str IS NOT NULL
+#         #         AND se.z_class_name_get_str <> ''
+#         #         ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;"""
+
+#         # prj_info_list = pd.read_sql_query(query, connection)
+#         prj_info_list = self.get_se_proj_info_query(select_list_str,select_list_str2,select_list_str3,select_list_str4,select_list_str5) #07/07 Kyaw
+#         # print(query)
+#         #posgre_get_rlistのdf_selectsの設定をこの関数内でもやりたい5/1
+#         df_selects = prj_info_list[['project_id','phase_id','variation_id','z_drive_system', 'z_class_name_get_str', 'z_wp_name_get_str']].drop_duplicates()
+#         df_selects.columns = ['project_id','phase_id','variation_id','drivetrain', 'phase', 'variation']
+#         if len(df_selects) >1:
+#             df_selects = df_selects.head(1)
+#         st.session_state.df_selects = df_selects
+        
+#         # サブクエリのテンプレート
+#         # サブクエリのテンプレート 山口　detail_dataとの内部結合までに、各IDについての最新の交信データのみを整理するように変更 更新情報を返すように変更10/11 _を;に変更　10/25
+#         #山口　テーブル分割に伴い編集10/21
+#         #山口　マップURLを拾う 11/1
+#         #山口 各IDを拾いたい 11/13 request median参照方法も変える
+#         #山口　order by a.z_paravalueidを追記した 12/6
+#         subquery_template = """
+#             (select
+#                 a.z_paravalueid                                                                   AS "{column1};z_paravalueid;{co}{var}",
+#                 a.project_id                                                                      AS "{column1};project_id;{co}{var}",
+#                 a.se_parameter_id                                                                 AS "{column1};se_parameter_id;{co}{var}",
+#                 a.phase_id                                                                        AS "{column1};phase_id;{co}{var}",
+#                 a.variation_id                                                                    AS "{column1};variation_id;{co}{var}",
+#                 a.z_prj_number                                                                    AS "{column1};z_prj_number;{co}{var}",
+#                 a.z_parent_paraitem                                                               AS "{column1};z_parent_paraitem;{co}{var}",
+#                 a.z_child_paraitem                                                                AS "{column1};z_child_paraitem;{co}{var}",
+#                 a.z_unit                                                                          AS "{column1};z_unit;{co}{var}",
+#                 replace(a.z_unit, 'm#00B2', '²')                                                  AS "{column1};z_unit_copy;{co}{var}",
+#                 a.z_wp_name_get_str                                                               AS "{column1};z_wp_name_get_str;{co}{var}",
+#                 a.z_request_median                                                                AS "{column1};z_request_median;{co}{var}",
+#                 CONCAT(c.section_code, ' ', 
+#                     c.contac_person_first_name, ' ',
+#                     c.contac_person_last_name)                                                    AS "{column1};contac_user;{co}{var}",
+#                 CONCAT(c.section_code, ' ', 
+#                     c.contac_person_first_name, ' ',
+#                     c.contac_person_last_name)                                                    AS "{column1};edited_user;{co}{var}",
+#                 CASE 
+#                     WHEN b.update_day IS NOT NULL THEN LEFT(CAST(b.update_day AS VARCHAR), 10) 
+#                     ELSE NULL 
+#                 END                                                                               AS "{column1};update_day;{co}{var}",
+#                 a.z_note                                                                          AS "{column1};z_note;{co}{var}",
+#                 d.state_name                                                                      AS "{column1};state_name;{co}{var}",
+#                 b.employee_number                                                                 AS "{column1};employee_number;{co}{var}",
+#                 b.user_memo                                                                       AS "{column1};user_memo;{co}{var}",
+#                 a.URL                                                                             AS "{column1};URL;{co}{var}",
+#                 ARRAY[
+#                     COALESCE(a.z_parent_paraitem, ''),
+#                     COALESCE(a.z_child_paraitem, '')
+#                 ]::TEXT[]                                                                         AS "param{alias}"
+   
+#             from
+#                 se_project_record_plz as a
+#             inner join
+#                 (select distinct on (z_paravalueid) * from detail_data order by z_paravalueid, update_day desc) as b
+#                 on 
+#                     a.z_paravalueid = b.z_paravalueid
+#             inner join
+#                 user_table as c
+#                 on
+#                     b.employee_number = c.employee_number
+#             inner join
+#                 approval_status_table as d
+#                 on
+#                     b.approval_status = d.state_key
+#             where a.z_wp_name_get_str = '{var}'
+#                 and a.z_prj_number = '{column1}'
+#                 and a.z_name = '{column2}'
+#                 and a.z_class_name_get_str = '{column3}'
+
+#             order by a.z_paravalueid
+#             ) as {alias} 
+#         """
+#         join_template = """
+#         on s0p."{column1};z_parent_paraitem;{co1}{var1}" = {alias}."{column2};z_parent_paraitem;{co2}{var2}" and
+#         s0p."{column1};z_child_paraitem;{co1}{var1}" = {alias}."{column2};z_child_paraitem;{co2}{var2}" and
+#         s0p."{column1};z_unit;{co1}{var1}" = {alias}."{column2};z_unit;{co2}{var2}"
+#         """
+#         join_template = """
+#         on s0p."{column1};z_parent_paraitem;{co1}{var1}" = {alias}."{column2};z_parent_paraitem;{co2}{var2}" and
+#         s0p."{column1};z_child_paraitem;{co1}{var1}" = {alias}."{column2};z_child_paraitem;{co2}{var2}" and
+#         s0p."{column1};z_unit;{co1}{var1}" = {alias}."{column2};z_unit;{co2}{var2}"
+#         """
+
+#         # サブクエリの生成
+#         subqueries = []				
+
+#         for i, row in prj_info_list.iterrows():
+#             if i == 0:
+#                 subqueries = r"select * from"
+#             if i > 0:
+#                 subqueries += "FULL OUTER JOIN"
+
+#             subqueries+=subquery_template.format(
+#                 column1=row['z_prj_number'],
+#                 column2=row['z_name'],
+#                 column3=row['z_class_name_get_str'],
+#                 co=row['z_class_name_get_str'][0] + row['z_class_name_get_str'][-1], #山口　列名に追加する文字列、フェーズ名をそのまま貼り付けると長さ制限にかかり機能しなくなるため、暫定的に最初と最後の文字のみをくっつける　11/6
+#                 var=row['z_wp_name_get_str'],
+#                 alias='s'+str(i)+'p')
+
+#             if i > 0:
+#                 subqueries+=join_template.format(
+#                     column1=prj_info_list['z_prj_number'][0],
+#                     column2=prj_info_list['z_prj_number'][i],
+#                     co1=prj_info_list['z_class_name_get_str'][0][0] + prj_info_list['z_class_name_get_str'][0][-1], #山口　列名に追加する文字列、フェーズ名をそのまま貼り付けると長さ制限にかかり機能しなくなるため、暫定的に最初と最後の文字のみをくっつける　11/6
+#                     co2=prj_info_list['z_class_name_get_str'][i][0] + prj_info_list['z_class_name_get_str'][i][-1], #山口　列名に追加する文字列、フェーズ名をそのまま貼り付けると長さ制限にかかり機能しなくなるため、暫定的に最初と最後の文字のみをくっつける　11/6
+#                     var1=prj_info_list['z_wp_name_get_str'][0],
+#                     var2=prj_info_list['z_wp_name_get_str'][i],
+#                     alias='s'+str(i)+'p'
+#                     )
+#         # print('subb:: ',subqueries)#山口デバック用
+#         print(subqueries)
+#         se_data_stuck = pd.read_sql_query(subqueries, connection)
+        
+#         print(prj_info_list)
+#         #山口　取得したDFから編集情報を列にまとめる 10/25 _->;に変更
+#         for i, row in prj_info_list.iterrows():
+#             column1=row['z_prj_number']
+#             var=row['z_wp_name_get_str']
+#             co=row['z_class_name_get_str'][0] + row['z_class_name_get_str'][-1] #山口　列名に追加する文字列、フェーズ名をそのまま貼り付けると長さ制限にかかり機能しなくなるため、暫定的に最初と最後の文字のみをくっつける　11/6
+#             print(column1)
+#             se_data_stuck[column1 + ';edited_info;' +co+ var] = "更新日：" + se_data_stuck[column1 + ';update_day;' +co+ var] + "\n更新者：" + se_data_stuck[column1 + ';edited_user;' +co+ var] + "\nメモ：" + se_data_stuck[column1 + ';user_memo;'+co + var]
+#             se_data_stuck[column1 + ';selected;' +co+ var] = False #山口　選択された項目を表すためのBooleanれつ追加　10/25
+#         #山口　Variationをselectoption6に入れることを忘れない
+#         # variation_unique = prj_info_list['variation'].drop_duplicates().tolist() 
+#         # st.session_state['selectoption6'] = variation_unique  #07/07 Kyaw: Move to shared function
+        
+#         return prj_info_list, se_data_stuck
+
+
     def posgre_get_date(self, select_list = [], select_list2 = [], select_list3 = [],select_list4 = [],select_list5 = []):#山口 ログ残し追加 12/3
         connection = self.conn
         select_list_str = ', '.join(f"'{item}'" for item in select_list)
@@ -452,63 +716,65 @@ class psql_class:
         #山口　テーブル分割に伴い編集10/21
         #山口　z_lot必要なし？
         #山口　新しいUIでほぼ確実に最初はこの関数でのデータ取得を行うようになった、なのでこの中でVariationもsession_stateに記録しておく
-        query = f"""
-SELECT DISTINCT ON (
-    se.z_prj_number,
-    se.z_name,
-    se.z_class_name_get_str,
-    se.z_wp_name_get_str,
-    se.architecturename,
-    se.z_destination,
-    se.z_drive_system,
-    wp_order, modified_string
-)
-    se.z_prj_number,
-    se.z_name,
-    se.z_class_name_get_str,
-    se.project_id,                                                                      
-    se.se_parameter_id,    
-    se.phase_id,         
-    se.variation_id,
-    va.variation,
-    se.z_wp_name_get_str,
-    se.architecturename,
-    se.z_destination,
-    se.z_drive_system,
-    pjf.project_code,
-    CASE 
-        WHEN detail.update_day IS NOT NULL THEN LEFT(CAST(detail.update_day AS VARCHAR), 10) 
-        ELSE NULL 
-    END as update_day,
-    CONCAT(user_table.section_code, ' ', user_table.contac_person_first_name, ' ',user_table.contac_person_last_name) as edited_user,
-    approve.state_name,
-    detail.user_memo,
-    CASE 
-        WHEN se.z_wp_name_get_str ~ '\d' THEN CAST(regexp_replace(se.z_wp_name_get_str, '\D', '', 'g') AS INTEGER)
-    END AS wp_order,
-    replace(se.z_wp_name_get_str,'Variation#', '') AS modified_string
-FROM se_project_record_plz as se
-INNER JOIN project_info AS pjf on se.project_id = pjf.id
-INNER JOIN phase as ph on ph.id = se.phase_id
-INNER JOIN variation va on va.id = se.variation_id
-inner join
-    (select distinct on (z_paravalueid) * from detail_data order by z_paravalueid, update_day desc) as detail
-on 
-    se.z_paravalueid = detail.z_paravalueid
-left outer join user_table on detail.employee_number = user_table.employee_number
-inner join approval_status_table as approve on detail.approval_status = approve.state_key
-WHERE pjf.project_code IN ({select_list_str})
-AND se.z_destination IN ({select_list_str2})
-AND se.z_drive_system IN ({select_list_str3})
-AND se.z_name IN ({select_list_str4})
-AND ph.phase IN ({select_list_str5})
-AND se.z_class_name_get_str IS NOT NULL
-AND se.z_class_name_get_str <> ''
-ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
-"""
+        # query = f"""
+        #         SELECT DISTINCT on (se.z_prj_number,
+		# 			se.z_name,
+		# 			se.z_class_name_get_str,
+		# 			se.z_wp_name_get_str,
+        #            	se.z_destination,
+		# 			se.z_drive_system,
+		# 			wp_order, modified_string)
+		# 			se.z_prj_number,
+		# 			se.z_name,
+		# 			se.z_class_name_get_str,
+		# 			se.project_id,                                                                      
+        #             se.se_parameter_id,    
+        #             se.phase_id,         
+        #             se.variation_id,
+        #             va.variation,
+		# 			se.z_wp_name_get_str,
+        #            	se.z_destination,
+		# 			se.z_drive_system,
+        #             pjf.project_code,
+		# 			CASE 
+	    #                 WHEN detail.update_day IS NOT NULL THEN LEFT(CAST(detail.update_day AS VARCHAR), 10) 
+	    #                 ELSE NULL 
+	    #             END as update_day,
+	    #             CONCAT(user_table.section_code, ' ', user_table.contac_person_first_name, ' ',user_table.contac_person_last_name) as edited_user,
+	    #             approve.state_name,
+	    #             detail.user_memo,
+        #             CASE 
+		# 				WHEN se.z_wp_name_get_str ~ '\d' THEN CAST(regexp_replace(se.z_wp_name_get_str, '\D', '', 'g') AS INTEGER)
+		# 			END AS wp_order,
+        #             replace(se.z_wp_name_get_str,'Variation#', '') AS modified_string
+        #         FROM se_project_record_plz as se
+        #         INNER JOIN project_info AS pjf on se.project_id = pjf.id
+        #         INNER JOIN phase as ph on ph.id = se.phase_id
+        #         INNER JOIN variation va on va.id = se.variation_id
+		# 		inner join
+		# 			(select distinct on (z_paravalueid) * from detail_data order by z_paravalueid, update_day desc) as detail
+        #         on 
+        #             se.z_paravalueid = detail.z_paravalueid
+        #         left outer join
+	    #             user_table 
+	    #         on
+	    #             detail.employee_number = user_table.employee_number
+	    #         inner join
+	    #             approval_status_table as approve
+	    #         on
+	    #             detail.approval_status = approve.state_key
+        #         WHERE pjf.project_code IN ({select_list_str})
+        #         AND se.z_destination IN ({select_list_str2})
+        #         AND se.z_drive_system IN ({select_list_str3})
+        #         AND se.z_name IN ({select_list_str4})
+        #         AND ph.phase IN ({select_list_str5})
+        #         AND se.z_class_name_get_str IS NOT NULL
+        #         AND se.z_class_name_get_str <> ''
+        #         ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;"""
 
-        prj_info_list = pd.read_sql_query(query, connection)
-        print(query)
+        # prj_info_list = pd.read_sql_query(query, connection)
+        # print(query)
+        prj_info_list = self.get_se_proj_info_query(select_list_str,select_list_str2,select_list_str3,select_list_str4,select_list_str5) #07/07 Kyaw
         #posgre_get_rlistのdf_selectsの設定をこの関数内でもやりたい5/1
         df_selects = prj_info_list[['project_id','phase_id','variation_id','z_drive_system', 'z_class_name_get_str', 'z_wp_name_get_str']].drop_duplicates()
         df_selects.columns = ['project_id','phase_id','variation_id','drivetrain', 'phase', 'variation']
@@ -630,17 +896,19 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             se_data_stuck[column1 + ';edited_info;' +str(co)+ str(var)] = "更新日：" + se_data_stuck[column1 + ';update_day;' +str(co)+ str(var)] + "\n更新者：" + se_data_stuck[column1 + ';edited_user;' +str(co)+ str(var)] + "\nメモ：" + se_data_stuck[column1 + ';user_memo;'+str(co) + str(var)]
             se_data_stuck[column1 + ';selected;' +str(co)+ str(var)] = False #山口　選択された項目を表すためのBooleanれつ追加　10/25
         #山口　Variationをselectoption6に入れることを忘れない
-        variation_unique = prj_info_list['variation'].drop_duplicates().tolist() 
-        st.session_state['selectoption6'] = variation_unique
+        # variation_unique = prj_info_list['variation'].drop_duplicates().tolist() 
+        # st.session_state['selectoption6'] = variation_unique   #07/07 Kyaw: Move to shared function
+        # se_data_stuck = se_data_stuck.drop_duplicates()
 
-        # Convert all list-type values to tuples so they can be hashed #10/20
+        # Step 1: Convert all list-type values to tuples so they can be hashed
         se_data_stuck = se_data_stuck.applymap(lambda x: tuple(x) if isinstance(x, list) else x)
 
-        # Drop fully duplicated rows
+        # Step 2: Drop fully duplicated rows
+        # se_data_stuck = se_data_stuck.drop_duplicates()
         se_data_stuck = se_data_stuck.drop_duplicates().reset_index(drop=True)
-        
-        return prj_info_list, se_data_stuck
 
+        return prj_info_list, se_data_stuck
+    
     #山口　simデータ取得用　12/2 仕向け、駆動方式含め絞り込むように 2/13
     def posgre_get_data_sim(self, select_list = [], select_list2 = [], select_list3 = [], select_list4 = [], select_list5 = []): #チョー　select_list6を消した 03/10
         connection = self.conn
@@ -701,9 +969,11 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
                 ORDER BY se.project_id, se.lot,  se.phase, se.variation, se.study_id;"""
         print(str(query)) #山口デバック用
         prj_info_list = pd.read_sql_query(query, connection)
+        print('pj info list sim:',prj_info_list)
         if len(prj_info_list)==0:
+            self.get_se_proj_info_query(select_list_str,select_list_str2,select_list_str3,select_list_str4,select_list_str5) #07/07 Kyaw
             return [], []
-        print(prj_info_list)
+        
         # サブクエリのテンプレート
         #山口　z_prj_numberは使いたくないためproject_idで代替する, z_noteはなくした12/2
         #山口　元となったSEパラメータ情報も取得する 12/4
@@ -723,12 +993,9 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
                 a.parameter_name_2                                                                AS "{column1};parameter_name_2;{co}{var}{study}",
                 a.rflcategory                                                                AS "{column1};rflcategory;{co}{var}{study}",
                 a.rflid                                                                AS "{column1};rflid;{co}{var}{study}",
-                a.related_model_parameter_id                                            AS "{column1};r_m_p_id;{co}{var}{study}", --山口　列名削減                 
                 a.parameter_unit                                                                          AS "{column1};parameter_unit;{co}{var}{study}",
                 replace(a.parameter_unit, 'm#00B2', '²')                                                  AS "{column1};parameter_unit_copy;{co}{var}{study}",
                 a.original_value                                                                AS "{column1};original_value;{co}{var}{study}",
-                a.target_value                                                                AS "{column1};target_value;{co}{var}{study}",
-                a.design_value                                                                AS "{column1};design_value;{co}{var}{study}",
                 a.overall_value                                                                AS "{column1};value;{co}{var}{study}",
                 CONCAT(c.section_code, ' ', 
                     c.contac_person_first_name, ' ',
@@ -808,6 +1075,104 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
         print(subqueries)#山口デバック用
         se_data_stuck = pd.read_sql_query(subqueries, connection)
         print(se_data_stuck)
+
+        # subqueries = []
+        # for i, row in prj_info_list.iterrows():
+        #     co = row['phase'][0] + row['phase'][-1]
+        #     alias = f"s{i}p"
+        #     var = row['variation']
+        #     study = row['study_id']
+        #     column1 = row['project_id']
+        #     column2 = row['lot']
+        #     column3 = row['phase']
+        #     column4 = row['variation']
+
+        #     subquery = f"""
+        #         (
+        #             SELECT
+        #                 a.id AS "{column1};id;{co}{var}{study}",
+        #                 a.project_id AS "{column1};project_id;{co}{var}{study}",
+        #                 a.senario_parameter_id AS "{column1};senario_parameter_id;{co}{var}{study}",
+        #                 a.phase_id AS "{column1};phase_id;{co}{var}{study}",
+        #                 a.phase AS "{column1};phase;{co}{var}{study}",
+        #                 a.variation_id AS "{column1};variation_id;{co}{var}{study}",
+        #                 a.variation AS "{column1};variation;{co}{var}{study}",
+        #                 a.study_id AS "{column1};study_id;{co}{var}{study}",
+        #                 a.parameter_name_1 AS "{column1};parameter_name_1;{co}{var}{study}",
+        #                 a.parameter_name_2 AS "{column1};parameter_name_2;{co}{var}{study}",
+        #                 a.rflcategory AS "{column1};rflcategory;{co}{var}{study}",
+        #                 a.rflid AS "{column1};rflid;{co}{var}{study}",
+        #                 a.parameter_unit AS "{column1};parameter_unit;{co}{var}{study}",
+        #                 REPLACE(a.parameter_unit, 'm#00B2', '²') AS "{column1};parameter_unit_copy;{co}{var}{study}",
+        #                 a.original_value AS "{column1};original_value;{co}{var}{study}",
+        #                 a.overall_value AS "{column1};value;{co}{var}{study}",
+        #                 CONCAT(c.section_code, ' ', c.contac_person_first_name, ' ', c.contac_person_last_name) AS "{column1};contac_user;{co}{var}{study}",
+        #                 CONCAT(c.section_code, ' ', c.contac_person_first_name, ' ', c.contac_person_last_name) AS "{column1};edited_user;{co}{var}{study}",
+        #                 CASE 
+        #                     WHEN b.update_day IS NOT NULL THEN LEFT(CAST(b.update_day AS VARCHAR), 10)
+        #                     ELSE NULL
+        #                 END AS "{column1};update_day;{co}{var}{study}",
+        #                 b.employee_number AS "{column1};employee_number;{co}{var}{study}",
+        #                 b.user_memo AS "{column1};user_memo;{co}{var}{study}",
+        #                 ARRAY[
+        #                     COALESCE(a.parameter_name_1, ''),
+        #                     COALESCE(a.rflcategory, ''),
+        #                     COALESCE(a.parameter_name_2, '')
+        #                 ]::TEXT[] AS "param{alias}"
+        #             FROM
+        #                 test_senario_project_record AS a
+        #             LEFT OUTER JOIN
+        #                 (SELECT DISTINCT ON (id) * FROM detail_data_sim ORDER BY id, update_day DESC) AS b
+        #                 ON a.id = b.id
+        #             LEFT OUTER JOIN
+        #                 user_table AS c
+        #                 ON b.employee_number = c.employee_number
+        #             WHERE
+        #                 a.variation = '{var}' AND
+        #                 a.project_id = '{column1}' AND
+        #                 a.lot = '{column2}' AND
+        #                 a.phase = '{column3}' AND
+        #                 a.variation = '{column4}' AND
+        #                 a.study_id = '{study}'
+        #             ORDER BY a.senario_parameter_id
+        #         ) AS {alias}
+        #     """
+
+        #     if i == 0:
+        #         subqueries.append("SELECT * FROM")
+        #     else:
+        #         subqueries.append("FULL OUTER JOIN")
+
+        #     subqueries.append(subquery)
+
+        #     if i > 0:
+        #         # Setup for join condition
+        #         co1 = prj_info_list['phase'][0][0] + prj_info_list['phase'][0][-1]
+        #         co2 = row['phase'][0] + row['phase'][-1]
+        #         var1 = prj_info_list['variation'][0]
+        #         var2 = row['variation']
+        #         study1 = prj_info_list['study_id'][0]
+        #         study2 = row['study_id']
+        #         project1 = prj_info_list['project_id'][0]
+        #         project2 = row['project_id']
+
+        #         join_clause = f"""
+        #         ON s0p."{project1};senario_parameter_id;{co1}{var1}{study1}" =
+        #         {alias}."{project2};senario_parameter_id;{co2}{var2}{study2}"
+        #         """
+        #         subqueries.append(join_clause)
+
+        # # Final query as a single string
+        # final_query = "\n".join(subqueries)
+
+        # # Debug print
+        # print('final query:',final_query)
+
+        # # Query execution
+        # se_data_stuck = pd.read_sql_query(final_query, connection)
+
+
+
         #山口　取得したDFから編集情報を列にまとめる 10/25 _->;に変更
         for i, row in prj_info_list.iterrows():
             column1=row['project_id']
@@ -817,9 +1182,6 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             print(co)
             se_data_stuck[str(column1) + ';edited_info;' +co+ var+study] = "更新日：" + se_data_stuck[str(column1)  + ';update_day;' +co+ var+study] + "\n更新者：" + se_data_stuck[str(column1) + ';edited_user;' +co+ var+study] + "\nメモ：" + se_data_stuck[str(column1)  + ';user_memo;'+co + var+study]
             se_data_stuck[str(column1)  + ';selected;' +co+ var+study] = False #山口　選択された項目を表すためのBooleanれつ追加　10/25
-            #山口　SEからのOriginal_value,Rからのtarget_valueをまとめてreferenced_valueとする。方やSE、方やRのため絶対に両方に入っていることはない　7/31
-            se_data_stuck[str(column1) + ';referenced_value;'  +co+ var+study] = se_data_stuck[str(column1)  + ';original_value;' +co+ var+study].fillna(se_data_stuck[str(column1)  + ';target_value;' +co+ var+study]) #ここなんでdesign_valueになっていた？？
-
         #params0pはグリッドでのぐるーぴんぐで使用されるが、ほかのスタディでのグルーピングを無視してしまう、そのためparams0pに全スタディの情報を乗っける 3/19
         df_params = se_data_stuck.loc[:,se_data_stuck.columns.str.contains('params')]
         df_params_merged = se_data_stuck['params0p']
@@ -834,12 +1196,8 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
         
         return prj_info_list, se_data_stuck
     
-        #12/11 #チョー
+    #12/11 #チョー
     def get_td_senario(self, project_id, phase_id, variation_id, study_id, senario_submodel, tdname_list = [], ):
-        """
-        TDに使用する変数値の一覧を取得する関数
-        Args:
-        """
         connection = self.conn
         tdname_value_list = ', '.join(f"'{item}'" for item in tdname_list)
         query = f"""
@@ -904,349 +1262,258 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
         """
         print(query)
         senario_variable_list = pd.read_sql_query(query, connection)
-        #ここでsenario_variable_listが一行もない場合、senario_submodelが見つからなかったことを示す。
-        if len(senario_variable_list)==0:
-            st.warning('走行パターンサブモデル' + senario_submodel + 'は登録されていません。')
         td_variable_list = pd.concat([td_variable_list, senario_variable_list])
         return td_variable_list
     
-    # #11/25 チョー #close this function for merge code  
-    # def posgre_get_compare_data(self, select_list = [], select_list2 = [], select_list3 = [], select_list4 = [], select_list5 = [], select_list6 = []):
-    #     connection = self.conn
-    #     select_list_str = ', '.join(f"'{item}'" for item in select_list)
-    #     select_list_str2 = ', '.join(f"'{item}'" for item in select_list2)
-    #     select_list_str3 = ', '.join(f"'{item}'" for item in select_list3)
-    #     select_list_str4 = ', '.join(f"'{item}'" for item in select_list4)
-    #     select_list_str5 = ', '.join(f"'{item}'" for item in select_list5)
-    #     select_list_str6 = ', '.join(f"'{item}'" for item in select_list6)
-        
-    #     query = f"""
-    #             SELECT DISTINCT on (se.z_prj_number,
-	# 				se.z_name,
-	# 				se.z_class_name_get_str,
-	# 				se.z_wp_name_get_str,
-    #                	se.z_destination,
-	# 				se.z_drive_system,
-	# 				wp_order, modified_string)
-	# 				se.z_prj_number,
-	# 				se.z_name,
-	# 				se.z_class_name_get_str,
-	# 				se.project_id,                                                                      
-    #                 se.se_parameter_id,    
-    #                 se.phase_id,         
-    #                 se.variation_id,
-	# 				se.z_wp_name_get_str,
-    #                	se.z_destination,
-	# 				se.z_drive_system,
-    #                 pjf.project_code,
-	# 				CASE 
-	#                     WHEN detail.update_day IS NOT NULL THEN LEFT(CAST(detail.update_day AS VARCHAR), 10) 
-	#                     ELSE NULL 
-	#                 END as update_day,
-	#                 CONCAT(user_table.section_code, ' ', user_table.contac_person_first_name, ' ',user_table.contac_person_last_name) as edited_user,
-	#                 approve.state_name,
-	#                 detail.user_memo,
-    #                 CASE 
-	# 					WHEN se.z_wp_name_get_str ~ '\d' THEN CAST(regexp_replace(se.z_wp_name_get_str, '\D', '', 'g') AS INTEGER)
-	# 				END AS wp_order,
-    #                 replace(se.z_wp_name_get_str,'Variation#', '') AS modified_string
-    #             FROM se_project_record_plz as se
-    #             INNER JOIN project_info AS pjf on se.project_id = pjf.id
-    #             INNER JOIN phase as ph on ph.id = se.phase_id
-	# 			inner join
-	# 				(select distinct on (z_paravalueid) * from detail_data order by z_paravalueid, update_day desc) as detail
-    #             on 
-    #                 se.z_paravalueid = detail.z_paravalueid
-    #             left outer join
-	#                 user_table 
-	#             on
-	#                 detail.employee_number = user_table.employee_number
-	#             inner join
-	#                 approval_status_table as approve
-	#             on
-	#                 detail.approval_status = approve.state_key
-    #             WHERE pjf.project_code IN ({select_list_str})
-    #             AND se.z_destination IN ({select_list_str2})
-    #             AND se.z_drive_system IN ({select_list_str3})
-    #             AND se.z_name IN ({select_list_str4})
-    #             AND ph.phase IN ({select_list_str5})
-    #             AND se.z_wp_name_get_str IN ({select_list_str6})
-    #             AND se.z_class_name_get_str IS NOT NULL
-    #             AND se.z_class_name_get_str <> ''
-    #             ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;"""
-    #     # print('compare query::',query) #山口デバック用
-    #     prj_info_list = pd.read_sql_query(query, connection)
-        
-    #     if len(st.session_state['compare_option6']) > 1:
-    #         if len(st.session_state['compare_option6']) == len(set(st.session_state['compare_option6'])):
-    #             print('condition 1')
-    #             # Set the categorical type and order for z_wp_name_get_str
-    #             prj_info_list['z_wp_name_get_str'] = pd.Categorical(
-    #                 prj_info_list['z_wp_name_get_str'],
-    #                 categories=st.session_state['compare_option6'],  # Use the original order
-    #                 ordered=True
-    #             )
-    #             # Sort by z_wp_name_get_str
-    #             prj_info_list = prj_info_list.sort_values('z_wp_name_get_str').reset_index(drop=True)
-
-    #         # Check for compare_option5
-    #         elif len(st.session_state['compare_option5']) == len(set(st.session_state['compare_option5'])):
-    #             print('condition 2')
-    #             # Set the categorical type and order for z_class_name_get_str
-    #             prj_info_list['z_class_name_get_str'] = pd.Categorical(
-    #                 prj_info_list['z_class_name_get_str'],
-    #                 categories=st.session_state['compare_option5'],  # Use the original order
-    #                 ordered=True
-    #             )
-    #             # Sort by z_class_name_get_str
-    #             prj_info_list = prj_info_list.sort_values('z_class_name_get_str').reset_index(drop=True)
-
-    #         # Check for compare_option4
-    #         elif len(st.session_state['compare_option4']) == len(set(st.session_state['compare_option4'])):
-    #             print('condition 3')
-    #             # Set the categorical type and order for z_name
-    #             prj_info_list['z_name'] = pd.Categorical(
-    #                 prj_info_list['z_name'],
-    #                 categories=st.session_state['compare_option4'],  # Use the original order
-    #                 ordered=True
-    #             )
-    #             # Sort by z_name
-    #             prj_info_list = prj_info_list.sort_values('z_name').reset_index(drop=True)
-
-    #         # Check for compare_option3
-    #         elif len(st.session_state['compare_option3']) == len(set(st.session_state['compare_option3'])):
-    #             print('condition 4')
-    #             # Set the categorical type and order for z_drive_system
-    #             prj_info_list['z_drive_system'] = pd.Categorical(
-    #                 prj_info_list['z_drive_system'],
-    #                 categories=st.session_state['compare_option3'],  # Use the original order
-    #                 ordered=True
-    #             )
-    #             # Sort by z_drive_system
-    #             prj_info_list = prj_info_list.sort_values('z_drive_system').reset_index(drop=True)
-
-    #         # Check for compare_option2
-    #         elif len(st.session_state['compare_option2']) == len(set(st.session_state['compare_option2'])):
-    #             print('condition 5')
-    #             # Set the categorical type and order for z_destination
-    #             prj_info_list['z_destination'] = pd.Categorical(
-    #                 prj_info_list['z_destination'],
-    #                 categories=st.session_state['compare_option2'],  # Use the original order
-    #                 ordered=True
-    #             )
-    #             # Sort by z_destination
-    #             prj_info_list = prj_info_list.sort_values('z_destination').reset_index(drop=True)
-
-    #         # Check for compare_option1
-    #         elif len(st.session_state['compare_option1']) == len(set(st.session_state['compare_option1'])):
-    #             print('condition 6')
-    #             # Set the categorical type and order for project_code
-    #             prj_info_list['project_code'] = pd.Categorical(
-    #                 prj_info_list['project_code'],
-    #                 categories=st.session_state['compare_option1'],  # Use the original order
-    #                 ordered=True
-    #             )
-    #             # Sort by project_code
-    #             prj_info_list = prj_info_list.sort_values('project_code').reset_index(drop=True)
-    #     # サブクエリのテンプレート
-    #     # サブクエリのテンプレート 山口　detail_dataとの内部結合までに、各IDについての最新の交信データのみを整理するように変更 更新情報を返すように変更10/11 _を;に変更　10/25
-    #     #山口　テーブル分割に伴い編集10/21
-    #     #山口　マップURLを拾う 11/1
-    #     #山口 各IDを拾いたい 11/13 request median参照方法も変える
-    #     subquery_template = """
-    #         (select
-    #             a.z_paravalueid                                                                   AS "{column1};z_paravalueid;{co}{var}",
-    #             a.project_id                                                                      AS "{column1};project_id;{co}{var}",
-    #             a.se_parameter_id                                                                      AS "{column1};se_parameter_id;{co}{var}",
-    #             a.phase_id                                                                      AS "{column1};phase_id;{co}{var}",
-    #             a.variation_id                                                                      AS "{column1};variation_id;{co}{var}",
-    #             a.z_prj_number                                                                    AS "{column1};z_prj_number;{co}{var}",
-    #             a.z_parent_paraitem                                                               AS "{column1};z_parent_paraitem;{co}{var}",
-    #             a.z_child_paraitem                                                                AS "{column1};z_child_paraitem;{co}{var}",
-    #             a.z_unit                                                                          AS "{column1};z_unit;{co}{var}",
-    #             replace(a.z_unit, 'm#00B2', '²')                                                  AS "{column1};z_unit_copy;{co}{var}",
-    #             a.z_wp_name_get_str                                                               AS "{column1};z_wp_name_get_str;{co}{var}",
-    #             a.z_request_median                                                                AS "{column1};z_request_median;{co}{var}",
-    #             CONCAT(c.section_code, ' ', 
-    #                 c.contac_person_first_name, ' ',
-    #                 c.contac_person_last_name)                                                    AS "{column1};contac_user;{co}{var}",
-    #             CONCAT(c.section_code, ' ', 
-    #                 c.contac_person_first_name, ' ',
-    #                 c.contac_person_last_name)                                                    AS "{column1};edited_user;{co}{var}",
-    #             CASE 
-    #                 WHEN b.update_day IS NOT NULL THEN LEFT(CAST(b.update_day AS VARCHAR), 10) 
-    #                 ELSE NULL 
-    #             END                                                                               AS "{column1};update_day;{co}{var}",
-    #             a.z_note                                                                          AS "{column1};z_note;{co}{var}",
-    #             d.state_name                                                                      AS "{column1};state_name;{co}{var}",
-    #             b.employee_number                                                                 AS "{column1};employee_number;{co}{var}",
-    #             b.user_memo                                                                       AS "{column1};user_memo;{co}{var}",
-    #             a.URL                                                                             AS "{column1};URL;{co}{var}",
-    #             ARRAY[
-    #                 COALESCE(a.z_parent_paraitem, ''),
-    #                 COALESCE(a.z_child_paraitem, '')
-    #             ]::TEXT[]                                                                         AS "param{alias}"
-   
-    #         from
-    #             se_project_record_plz as a
-    #         inner join
-    #             (select distinct on (z_paravalueid) * from detail_data order by z_paravalueid, update_day desc) as b
-    #             on 
-    #                 a.z_paravalueid = b.z_paravalueid
-    #         inner join
-    #             user_table as c
-    #             on
-    #                 b.employee_number = c.employee_number
-    #         inner join
-    #             approval_status_table as d
-    #             on
-    #                 b.approval_status = d.state_key
-    #         where a.z_wp_name_get_str = '{var}'
-    #             and a.z_prj_number = '{column1}'
-    #             and a.z_name = '{column2}'
-    #             and a.z_class_name_get_str = '{column3}'
-    #         order by a.z_paravalueid
-    #         ) as {alias} 
-    #     """
-    #     join_template = """
-    #     on s0p."{column1};z_parent_paraitem;{co1}{var1}" = {alias}."{column2};z_parent_paraitem;{co2}{var2}" and
-    #     s0p."{column1};z_child_paraitem;{co1}{var1}" = {alias}."{column2};z_child_paraitem;{co2}{var2}" and
-    #     s0p."{column1};z_unit;{co1}{var1}" = {alias}."{column2};z_unit;{co2}{var2}"
-    #     """
-    #     join_template = """
-    #     on s0p."{column1};z_parent_paraitem;{co1}{var1}" = {alias}."{column2};z_parent_paraitem;{co2}{var2}" and
-    #     s0p."{column1};z_child_paraitem;{co1}{var1}" = {alias}."{column2};z_child_paraitem;{co2}{var2}" and
-    #     s0p."{column1};z_unit;{co1}{var1}" = {alias}."{column2};z_unit;{co2}{var2}"
-    #     """
-
-    #     # サブクエリの生成
-    #     subqueries = []				
-
-    #     for i, row in prj_info_list.iterrows():
-    #         if i == 0:
-    #             subqueries = r"select * from"
-    #         if i > 0:
-    #             subqueries += "FULL OUTER JOIN"
-
-    #         subqueries+=subquery_template.format(
-    #             column1=row['z_prj_number'],
-    #             column2=row['z_name'],
-    #             column3=row['z_class_name_get_str'],
-    #             co=row['z_class_name_get_str'][0] + row['z_class_name_get_str'][-1], #山口　列名に追加する文字列、フェーズ名をそのまま貼り付けると長さ制限にかかり機能しなくなるため、暫定的に最初と最後の文字のみをくっつける　11/6
-    #             var=row['z_wp_name_get_str'],
-    #             alias='s'+str(i)+'p')
-
-    #         if i > 0:
-    #             subqueries+=join_template.format(
-    #                 column1=prj_info_list['z_prj_number'][0],
-    #                 column2=prj_info_list['z_prj_number'][i],
-    #                 co1=prj_info_list['z_class_name_get_str'][0][0] + prj_info_list['z_class_name_get_str'][0][-1], #山口　列名に追加する文字列、フェーズ名をそのまま貼り付けると長さ制限にかかり機能しなくなるため、暫定的に最初と最後の文字のみをくっつける　11/6
-    #                 co2=prj_info_list['z_class_name_get_str'][i][0] + prj_info_list['z_class_name_get_str'][i][-1], #山口　列名に追加する文字列、フェーズ名をそのまま貼り付けると長さ制限にかかり機能しなくなるため、暫定的に最初と最後の文字のみをくっつける　11/6
-    #                 var1=prj_info_list['z_wp_name_get_str'][0],
-    #                 var2=prj_info_list['z_wp_name_get_str'][i],
-    #                 alias='s'+str(i)+'p'
-    #                 )
-    #     # print(subqueries)#山口デバック用
-    #     se_data_stuck = pd.read_sql_query(subqueries, connection)
-    #     # print(se_data_stuck)
-    #     #山口　取得したDFから編集情報を列にまとめる 10/25 _->;に変更
-    #     for i, row in prj_info_list.iterrows():
-    #         column1=row['z_prj_number']
-    #         var=row['z_wp_name_get_str']
-    #         co=row['z_class_name_get_str'][0] + row['z_class_name_get_str'][-1] #山口　列名に追加する文字列、フェーズ名をそのまま貼り付けると長さ制限にかかり機能しなくなるため、暫定的に最初と最後の文字のみをくっつける　11/6
-    #         # print(co)
-    #         se_data_stuck[column1 + ';edited_info;' +co+ var] = "更新日：" + se_data_stuck[column1 + ';update_day;' +co+ var] + "\n更新者：" + se_data_stuck[column1 + ';edited_user;' +co+ var] + "\nメモ：" + se_data_stuck[column1 + ';user_memo;'+co + var]
-    #         se_data_stuck[column1 + ';selected;' +co+ var] = None #山口　選択された項目を表すためのBooleanれつ追加　10/25
-        
-    #     return prj_info_list, se_data_stuck
-    
-    #  #Kyaw #CompareSE Upd
-    
-    #Kyaw #CompareSE Upd #10/29 merge#3 merge#4
-    def posgre_get_compare_data(self, selected_archi=[], selected_project=[], selected_destination=[], selected_drivesystem=[], selected_lot=[], selected_phase=[], selected_variation=[]):
+    #11/25 チョー
+    def posgre_get_compare_data(self, select_list = [], select_list2 = [], select_list3 = [], select_list4 = [], select_list5 = [], select_list6 = []):
         connection = self.conn
-        df_list = []
-
-        num_sets = min(
-            len(selected_archi),
-            len(selected_project),
-            len(selected_destination),
-            len(selected_drivesystem),
-            len(selected_lot),
-            len(selected_phase),
-            len(selected_variation)
-        )
-
-        for i in range(num_sets):
-            query = """
-SELECT DISTINCT ON (
-    se.z_prj_number,
-    se.z_name,
-    se.z_class_name_get_str,
-    se.z_wp_name_get_str,
-    se.z_destination,
-    se.z_drive_system,
-    wp_order, modified_string
-)
-    se.z_prj_number,
-    se.z_name,
-    se.z_class_name_get_str,
-    se.project_id,                                                                      
-    se.se_parameter_id,    
-    se.phase_id,         
-    se.variation_id,
-    se.z_wp_name_get_str,
-    se.z_destination,
-    se.z_drive_system,
-    pjf.project_code,
-    CASE 
-        WHEN detail.update_day IS NOT NULL THEN LEFT(CAST(detail.update_day AS VARCHAR), 10) 
-        ELSE NULL 
-    END as update_day,
-    CONCAT(user_table.section_code, ' ', user_table.contac_person_first_name, ' ',user_table.contac_person_last_name) as edited_user,
-    approve.state_name,
-    detail.user_memo,
-    CASE 
-        WHEN se.z_wp_name_get_str ~ '\\d' THEN CAST(regexp_replace(se.z_wp_name_get_str, '\\D', '', 'g') AS INTEGER)
-    END AS wp_order,
-    replace(se.z_wp_name_get_str,'Variation#', '') AS modified_string
-FROM se_project_record_plz as se
-INNER JOIN project_info AS pjf on se.project_id = pjf.id
-INNER JOIN phase as ph on ph.id = se.phase_id
-INNER JOIN (
-    SELECT DISTINCT ON (z_paravalueid) * 
-    FROM detail_data 
-    ORDER BY z_paravalueid, update_day DESC
-) as detail ON se.z_paravalueid = detail.z_paravalueid
-LEFT OUTER JOIN user_table ON detail.employee_number = user_table.employee_number
-INNER JOIN approval_status_table as approve ON detail.approval_status = approve.state_key
-WHERE pjf.project_code = %s
-AND se.z_destination = %s
-AND se.z_drive_system = %s
-AND se.z_name = %s
-AND ph.phase = %s
-AND se.z_wp_name_get_str = %s
-AND se.z_class_name_get_str IS NOT NULL
-AND se.z_class_name_get_str <> ''
-ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
-            """
-
-            params = (
-                selected_project[i],
-                selected_destination[i],
-                selected_drivesystem[i],
-                selected_lot[i],
-                selected_phase[i],
-                selected_variation[i]
-            )
-
-            df = pd.read_sql_query(query, connection, params=params)
-            df_list.append(df)
-
-        # Concatenate all DataFrames into one
-        if df_list:
-            prj_info_list = pd.concat(df_list, ignore_index=True)
+        select_list_str = ', '.join(f"'{item}'" for item in select_list)
+        select_list_str2 = ', '.join(f"'{item}'" for item in select_list2)
+        select_list_str3 = ', '.join(f"'{item}'" for item in select_list3)
+        select_list_str4 = ', '.join(f"'{item}'" for item in select_list4)
+        select_list_str5 = ', '.join(f"'{item}'" for item in select_list5)
+        select_list_str6 = ', '.join(f"'{item}'" for item in select_list6)
         
+        query = f"""
+                SELECT DISTINCT on (se.z_prj_number,
+					se.z_name,
+					se.z_class_name_get_str,
+					se.z_wp_name_get_str,
+                   	se.z_destination,
+					se.z_drive_system,
+					wp_order, modified_string)
+					se.z_prj_number,
+					se.z_name,
+					se.z_class_name_get_str,
+					se.project_id,                                                                      
+                    se.se_parameter_id,    
+                    se.phase_id,         
+                    se.variation_id,
+					se.z_wp_name_get_str,
+                   	se.z_destination,
+					se.z_drive_system,
+                    pjf.project_code,
+					CASE 
+	                    WHEN detail.update_day IS NOT NULL THEN LEFT(CAST(detail.update_day AS VARCHAR), 10) 
+	                    ELSE NULL 
+	                END as update_day,
+	                CONCAT(user_table.section_code, ' ', user_table.contac_person_first_name, ' ',user_table.contac_person_last_name) as edited_user,
+	                approve.state_name,
+	                detail.user_memo,
+                    CASE 
+						WHEN se.z_wp_name_get_str ~ '\d' THEN CAST(regexp_replace(se.z_wp_name_get_str, '\D', '', 'g') AS INTEGER)
+					END AS wp_order,
+                    replace(se.z_wp_name_get_str,'Variation#', '') AS modified_string
+                FROM se_project_record_plz as se
+                INNER JOIN project_info AS pjf on se.project_id = pjf.id
+                INNER JOIN phase as ph on ph.id = se.phase_id
+				inner join
+					(select distinct on (z_paravalueid) * from detail_data order by z_paravalueid, update_day desc) as detail
+                on 
+                    se.z_paravalueid = detail.z_paravalueid
+                left outer join
+	                user_table 
+	            on
+	                detail.employee_number = user_table.employee_number
+	            inner join
+	                approval_status_table as approve
+	            on
+	                detail.approval_status = approve.state_key
+                WHERE pjf.project_code IN ({select_list_str})
+                AND se.z_destination IN ({select_list_str2})
+                AND se.z_drive_system IN ({select_list_str3})
+                AND se.z_name IN ({select_list_str4})
+                AND ph.phase IN ({select_list_str5})
+                AND se.z_wp_name_get_str IN ({select_list_str6})
+                AND se.z_class_name_get_str IS NOT NULL
+                AND se.z_class_name_get_str <> ''
+                ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;"""
+        # print('compare query::',query) #山口デバック用
+        prj_info_list = pd.read_sql_query(query, connection)
+        
+        if len(st.session_state['compare_option6']) > 1:
+            if len(st.session_state['compare_option6']) == len(set(st.session_state['compare_option6'])):
+                print('condition 1')
+                # Set the categorical type and order for z_wp_name_get_str
+                prj_info_list['z_wp_name_get_str'] = pd.Categorical(
+                    prj_info_list['z_wp_name_get_str'],
+                    categories=st.session_state['compare_option6'],  # Use the original order
+                    ordered=True
+                )
+                # Sort by z_wp_name_get_str
+                prj_info_list = prj_info_list.sort_values('z_wp_name_get_str').reset_index(drop=True)
+
+            # Check for compare_option5
+            elif len(st.session_state['compare_option5']) == len(set(st.session_state['compare_option5'])):
+                print('condition 2')
+                # Set the categorical type and order for z_class_name_get_str
+                prj_info_list['z_class_name_get_str'] = pd.Categorical(
+                    prj_info_list['z_class_name_get_str'],
+                    categories=st.session_state['compare_option5'],  # Use the original order
+                    ordered=True
+                )
+                # Sort by z_class_name_get_str
+                prj_info_list = prj_info_list.sort_values('z_class_name_get_str').reset_index(drop=True)
+
+            # Check for compare_option4
+            elif len(st.session_state['compare_option4']) == len(set(st.session_state['compare_option4'])):
+                print('condition 3')
+                # Set the categorical type and order for z_name
+                prj_info_list['z_name'] = pd.Categorical(
+                    prj_info_list['z_name'],
+                    categories=st.session_state['compare_option4'],  # Use the original order
+                    ordered=True
+                )
+                # Sort by z_name
+                prj_info_list = prj_info_list.sort_values('z_name').reset_index(drop=True)
+
+            # Check for compare_option3
+            elif len(st.session_state['compare_option3']) == len(set(st.session_state['compare_option3'])):
+                print('condition 4')
+                # Set the categorical type and order for z_drive_system
+                prj_info_list['z_drive_system'] = pd.Categorical(
+                    prj_info_list['z_drive_system'],
+                    categories=st.session_state['compare_option3'],  # Use the original order
+                    ordered=True
+                )
+                # Sort by z_drive_system
+                prj_info_list = prj_info_list.sort_values('z_drive_system').reset_index(drop=True)
+
+            # Check for compare_option2
+            elif len(st.session_state['compare_option2']) == len(set(st.session_state['compare_option2'])):
+                print('condition 5')
+                # Set the categorical type and order for z_destination
+                prj_info_list['z_destination'] = pd.Categorical(
+                    prj_info_list['z_destination'],
+                    categories=st.session_state['compare_option2'],  # Use the original order
+                    ordered=True
+                )
+                # Sort by z_destination
+                prj_info_list = prj_info_list.sort_values('z_destination').reset_index(drop=True)
+
+            # Check for compare_option1
+            elif len(st.session_state['compare_option1']) == len(set(st.session_state['compare_option1'])):
+                print('condition 6')
+                # Set the categorical type and order for project_code
+                prj_info_list['project_code'] = pd.Categorical(
+                    prj_info_list['project_code'],
+                    categories=st.session_state['compare_option1'],  # Use the original order
+                    ordered=True
+                )
+                # Sort by project_code
+                prj_info_list = prj_info_list.sort_values('project_code').reset_index(drop=True)
+        # サブクエリのテンプレート
+        # サブクエリのテンプレート 山口　detail_dataとの内部結合までに、各IDについての最新の交信データのみを整理するように変更 更新情報を返すように変更10/11 _を;に変更　10/25
+        #山口　テーブル分割に伴い編集10/21
+        #山口　マップURLを拾う 11/1
+        #山口 各IDを拾いたい 11/13 request median参照方法も変える
+        
+        # subquery_template = """
+        #     (select
+        #         a.z_paravalueid                                                                   AS "{column1};z_paravalueid;{co}{var}",
+        #         a.project_id                                                                      AS "{column1};project_id;{co}{var}",
+        #         a.se_parameter_id                                                                      AS "{column1};se_parameter_id;{co}{var}",
+        #         a.phase_id                                                                      AS "{column1};phase_id;{co}{var}",
+        #         a.variation_id                                                                      AS "{column1};variation_id;{co}{var}",
+        #         a.z_prj_number                                                                    AS "{column1};z_prj_number;{co}{var}",
+        #         a.z_parent_paraitem                                                               AS "{column1};z_parent_paraitem;{co}{var}",
+        #         a.z_child_paraitem                                                                AS "{column1};z_child_paraitem;{co}{var}",
+        #         a.z_unit                                                                          AS "{column1};z_unit;{co}{var}",
+        #         replace(a.z_unit, 'm#00B2', '²')                                                  AS "{column1};z_unit_copy;{co}{var}",
+        #         a.z_wp_name_get_str                                                               AS "{column1};z_wp_name_get_str;{co}{var}",
+        #         a.z_request_median                                                                AS "{column1};z_request_median;{co}{var}",
+        #         CONCAT(c.section_code, ' ', 
+        #             c.contac_person_first_name, ' ',
+        #             c.contac_person_last_name)                                                    AS "{column1};contac_user;{co}{var}",
+        #         CONCAT(c.section_code, ' ', 
+        #             c.contac_person_first_name, ' ',
+        #             c.contac_person_last_name)                                                    AS "{column1};edited_user;{co}{var}",
+        #         CASE 
+        #             WHEN b.update_day IS NOT NULL THEN LEFT(CAST(b.update_day AS VARCHAR), 10) 
+        #             ELSE NULL 
+        #         END                                                                               AS "{column1};update_day;{co}{var}",
+        #         a.z_note                                                                          AS "{column1};z_note;{co}{var}",
+        #         d.state_name                                                                      AS "{column1};state_name;{co}{var}",
+        #         b.employee_number                                                                 AS "{column1};employee_number;{co}{var}",
+        #         b.user_memo                                                                       AS "{column1};user_memo;{co}{var}",
+        #         a.URL                                                                             AS "{column1};URL;{co}{var}",
+        #         ARRAY[
+        #             COALESCE(a.z_parent_paraitem, ''),
+        #             COALESCE(a.z_child_paraitem, '')
+        #         ]::TEXT[]                                                                         AS "param{alias}"
+   
+        #     from
+        #         se_project_record_plz as a
+        #     inner join
+        #         (select distinct on (z_paravalueid) * from detail_data order by z_paravalueid, update_day desc) as b
+        #         on 
+        #             a.z_paravalueid = b.z_paravalueid
+        #     inner join
+        #         user_table as c
+        #         on
+        #             b.employee_number = c.employee_number
+        #     inner join
+        #         approval_status_table as d
+        #         on
+        #             b.approval_status = d.state_key
+        #     where a.z_wp_name_get_str = '{var}'
+        #         and a.z_prj_number = '{column1}'
+        #         and a.z_name = '{column2}'
+        #         and a.z_class_name_get_str = '{column3}'
+        #     order by a.z_paravalueid
+        #     ) as {alias} 
+        # """
+        # join_template = """
+        # on s0p."{column1};z_parent_paraitem;{co1}{var1}" = {alias}."{column2};z_parent_paraitem;{co2}{var2}" and
+        # s0p."{column1};z_child_paraitem;{co1}{var1}" = {alias}."{column2};z_child_paraitem;{co2}{var2}" and
+        # s0p."{column1};z_unit;{co1}{var1}" = {alias}."{column2};z_unit;{co2}{var2}"
+        # """
+        # join_template = """
+        # on s0p."{column1};z_parent_paraitem;{co1}{var1}" = {alias}."{column2};z_parent_paraitem;{co2}{var2}" and
+        # s0p."{column1};z_child_paraitem;{co1}{var1}" = {alias}."{column2};z_child_paraitem;{co2}{var2}" and
+        # s0p."{column1};z_unit;{co1}{var1}" = {alias}."{column2};z_unit;{co2}{var2}"
+        # """
+
+        # # サブクエリの生成
+        # subqueries = []				
+
+        # for i, row in prj_info_list.iterrows():
+        #     if i == 0:
+        #         subqueries = r"select * from"
+        #     if i > 0:
+        #         subqueries += "FULL OUTER JOIN"
+
+        #     subqueries+=subquery_template.format(
+        #         column1=row['z_prj_number'],
+        #         column2=row['z_name'],
+        #         column3=row['z_class_name_get_str'],
+        #         co=row['z_class_name_get_str'][0] + row['z_class_name_get_str'][-1], #山口　列名に追加する文字列、フェーズ名をそのまま貼り付けると長さ制限にかかり機能しなくなるため、暫定的に最初と最後の文字のみをくっつける　11/6
+        #         var=row['z_wp_name_get_str'],
+        #         alias='s'+str(i)+'p')
+
+        #     if i > 0:
+        #         subqueries+=join_template.format(
+        #             column1=prj_info_list['z_prj_number'][0],
+        #             column2=prj_info_list['z_prj_number'][i],
+        #             co1=prj_info_list['z_class_name_get_str'][0][0] + prj_info_list['z_class_name_get_str'][0][-1], #山口　列名に追加する文字列、フェーズ名をそのまま貼り付けると長さ制限にかかり機能しなくなるため、暫定的に最初と最後の文字のみをくっつける　11/6
+        #             co2=prj_info_list['z_class_name_get_str'][i][0] + prj_info_list['z_class_name_get_str'][i][-1], #山口　列名に追加する文字列、フェーズ名をそのまま貼り付けると長さ制限にかかり機能しなくなるため、暫定的に最初と最後の文字のみをくっつける　11/6
+        #             var1=prj_info_list['z_wp_name_get_str'][0],
+        #             var2=prj_info_list['z_wp_name_get_str'][i],
+        #             alias='s'+str(i)+'p'
+        #             )
+        # # print(subqueries)#山口デバック用
+        # se_data_stuck = pd.read_sql_query(subqueries, connection)
+        # # print(se_data_stuck)
+        # #山口　取得したDFから編集情報を列にまとめる 10/25 _->;に変更
+        # for i, row in prj_info_list.iterrows():
+        #     column1=row['z_prj_number']
+        #     var=row['z_wp_name_get_str']
+        #     co=row['z_class_name_get_str'][0] + row['z_class_name_get_str'][-1] #山口　列名に追加する文字列、フェーズ名をそのまま貼り付けると長さ制限にかかり機能しなくなるため、暫定的に最初と最後の文字のみをくっつける　11/6
+        #     # print(co)
+        #     se_data_stuck[column1 + ';edited_info;' +co+ var] = "更新日：" + se_data_stuck[column1 + ';update_day;' +co+ var] + "\n更新者：" + se_data_stuck[column1 + ';edited_user;' +co+ var] + "\nメモ：" + se_data_stuck[column1 + ';user_memo;'+co + var]
+        #     se_data_stuck[column1 + ';selected;' +co+ var] = None #山口　選択された項目を表すためのBooleanれつ追加　10/25
+
         subquery_template = """
             (select
                 a.z_paravalueid                                                                   AS "{column1};z_paravalueid;{co}{var}",
@@ -1345,7 +1612,7 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
         print(subqueries)
         se_data_stuck = pd.read_sql_query(subqueries, connection)
         
-        
+        print(prj_info_list)
         #山口　取得したDFから編集情報を列にまとめる 10/25 _->;に変更
         for i, row in prj_info_list.iterrows():
             column1=row['z_prj_number']
@@ -1354,12 +1621,9 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             print(column1)
             se_data_stuck[column1 + ';edited_info;' +str(co)+ str(var)] = "更新日：" + se_data_stuck[column1 + ';update_day;' +str(co)+ str(var)] + "\n更新者：" + se_data_stuck[column1 + ';edited_user;' +str(co)+ str(var)] + "\nメモ：" + se_data_stuck[column1 + ';user_memo;'+str(co) + str(var)]
             se_data_stuck[column1 + ';selected;' +str(co)+ str(var)] = False #山口　選択された項目を表すためのBooleanれつ追加　10/25
-            se_data_stuck[column1 + ';compared_result;' +str(co)+ str(var)] = ''
-        print('prj_info_list: ',prj_info_list)
+        
         return prj_info_list, se_data_stuck
-
-
-
+    
     #11/25 #チョー
     def get_varation(self, select_list = [], select_list2 = [], select_list3 = [],select_list4 = [],select_list5 = []):
         connection = self.conn
@@ -1503,18 +1767,15 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
         # st.write('pj info list: ', prj_info_list)
         return se_data_stuck
 
-    def swap_df(self, df):#あんたまた列名長すぎてエラー起こしているじゃないか！？！？！？！？！？！？！？！？！
+    def swap_df(self, df):
         prev_cols = None
         pre_df = pd.DataFrame()
         new_df = pd.DataFrame()
         # 列名から数字を取得して列が変わるまで横に結合し、数字が変わったタイミングで縦結合 山口　ここ数値が変わったタイミングである必要はない、単に；で分割した最後を見るのみ　11/1
         for col_name, data in df.items():
-
             #match = re.findall(r'\d+', col_name)
-            match = col_name.split(';')[0] + col_name.split(';')[-1]#；で分割し、最後を見て判断 11/1　最後だけじゃ足りない、最初も見る　`11/1 もっと列名縮める7/7
-            
+            match = col_name.split(';')[0] + col_name.split(';')[-1]#；で分割し、最後を見て判断 11/1　最後だけじゃ足りない、最初も見る　`11/1
             if match and prev_cols is not None and match != prev_cols or col_name == 'INDEX':
-   
                 new_df = pd.concat([new_df, pd.DataFrame(pre_df)])
                 pre_df = pd.DataFrame()
             col_nm_str = col_name.split(";")
@@ -1562,11 +1823,12 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
 
         # Extract columns with 'selected' in the name and remove unnecessary ones in a single operation
         selected_cols = [col for col in df_mold.columns if 'selected' in col and 'timeseries' not in col]#山口 Rリストではtimeseriesを含む列を省きたいため条件追加2/3
-        non_selected_cols = [col for col in df_mold.columns if 'selected' not in col and 'edited_info' not in col and 'params' not in col and ';' in col and 'referenced_value' not in col] #山口 Rリストでは;を含まない列を省きたいため条件追加2/3 senario_listのreferenced_valueも除外対象に含む 8/5
-
+        non_selected_cols = [col for col in df_mold.columns if 'selected' not in col and 'edited_info' not in col and 'params' not in col and ';' in col] #山口 Rリストでは;を含まない列を省きたいため条件追加2/3
+        print(selected_cols)
         
         df2_selected = df_mold[selected_cols]  # Only 'selected' columns
         df2 = df_mold[non_selected_cols]  # Columns without 'selected', 'edited_info', and 'params'
+
         # Convert the selected columns to a 1D array (flatten)
         mask = df2_selected.T.values.flatten()  # This should correspond to a selection mask
         # Perform transformation (ensure `swap_df` is optimized)
@@ -1736,64 +1998,6 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
         if cur:
             cur.close()  
 
-    def create_new_map(self,new_map_name, username, now, xname, Xval,Xid, yname, Yval, Yid, zname, Zval, Zid, cube_variable_name, CUBEval, CUBEid, map_variable_name, MAPval, MAPid,  tablenames, TABLEvals, TABLEids, project_id, parameter_id, phase_id, variation_id, study_id, scope_name):
-        try:
-            cur = self.conn.cursor()
-            
-            if (Xval is not None) & (Yval is not None) & (MAPval is not None):#MAPデータが渡されたとき
-                vals=[Xval, Yval, MAPval]
-
-                ids=[Xid, Yid,MAPid]
-            
-            elif  (Xval is not None) & (TABLEvals is not None):#TABLEデータが渡されたとき
-                vals=[Xval]+TABLEvals
-                ids = [Xid]+TABLEids
-            
-            elif (Xval is not None) & (Yval is not None) & (Zval is not None) &(CUBEval is not None):
-                ids=[Xid, Yid, Zid, CUBEid]
-                vals=[Xval, Yval, Zval, CUBEval]
-            else:
-                st.error('some value is missing!! abort creation.')
-                return
-
-            for i in range(len(vals)):
-                print(i)
-                query_text = sql.SQL("insert into map_structure values(%s,%s,%s,%s);")
-                cur.execute(query_text,(new_map_name, ids[i], vals[i], scope_name)) 
-                print('map value updated')
-                query_text = sql.SQL("insert into detail_data_map_name values(%s, %s, %s, %s, %s);")
-                cur.execute(query_text,(new_map_name, ids[i], username, now, vals[i]))
-                print('logged')
-            if int(st.session_state['chosen_id']) == 1 :
-                query_text = sql.SQL("update project_parameter set value = %s where project_id=%s and se_parameter_id= %s and phase_id=%s and variation_id=%s")
-                cur.execute(query_text, (new_map_name,project_id,parameter_id, phase_id, variation_id))
-                #im too lazy to log into detail_data ill do it later
-            elif int(st.session_state['chosen_id']) == 2 :
-                st.error('map function for R list is not suppotred')
-                return 
-            elif int(st.session_state['chosen_id']) == 3 :
-                query_text = sql.SQL("update test_project_senario_parameter set updated_value = %s where project_id=%s and senario_parameter_id=%s and phase_id = %s and variation_id=%s and study_id=%s")
-                cur.execute(query_text, (new_map_name, project_id, parameter_id,phase_id, variation_id, study_id))
-                
-        except psycopg2.Error as e:
-            
-            # エラー発生時にロールバック
-            self.conn.rollback()
-            raise e #raise分の位置を帰る　山口　10/25
-            return None
-        
-        self.conn.commit()
-        if cur:
-            cur.close()      
-            
- 
-    def get_map_variables_all(self):
-
-        connection = self.conn
-        query1="select id, variable_name, unit,axis from map_variable;"
-        df = pd.read_sql_query(query1, connection)
-        return df
-
     def get_usecase_timeseries(self, usecase_id):
         try:
             cur = self.conn.cursor()
@@ -1840,6 +2044,7 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             
             df_RFL_to_edit = pd.DataFrame(result, columns=['project_id','rfl_id','phase_id','requirement_id','usecase_id','performance','requirement', 'function_id', 'function' , 'logic_id', 'logic'])
             
+            st.write(df_RFL_to_edit)
             if len(df_RFL_to_edit)==0:
                 st.error('指定されたプロジェクト、フェーズ、性能、ユースケースに該当するRFLが見つかりませんでした。')
                 return
@@ -1877,6 +2082,10 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
                 else:
                     st.error('unexpected error:rflcategory not match')
                     continue
+                #st.write(query.format(value, project_id, phase_id, *rflids))
+                #st.write(value)
+                #st.write('for')
+                #st.write(rflids)
                 query = f"insert into detail_data_rfl values (%s, %s, %s, %s, %s, null, %s, %s)"
                 
                 for rflid in rflids:
@@ -2008,11 +2217,8 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             elif (Xid is not None) & (Yid is not None) &(Zid is not None) & (CUBEid is not None) & (Xval is not None) & (Yval is not None) & (Zval is not None) &(CUBEval is not None):
                 ids=[Xid, Yid, Zid, CUBEid]
                 vals=[Xval, Yval, Zval, CUBEval]
-            else:
-                st.error('unexpected request,abort')
-                st.write(Xid,Yid,Zid,CUBEid,MAPid,TABLEids)
-                st.write(Xval, Yval, Zval, CUBEval, MAPval, TABLEvals)
-                return
+            print(ids)
+            print(vals)
             for i in range(len(ids)):
                 print(i)
                 query_text = sql.SQL("update map_structure set value=%s where map_name=%s and map_variable_id=%s;")
@@ -2252,7 +2458,167 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
         if cur:
             cur.close()  
         
-    def add_new_study(self, project_id, phase_id, variation_id, study_id, R, designItem, usecase, usecase_submodel, TD, submodels, variables):#山口　新規スタディの追加 12/5 マップが紐づいているものを引き継げるように12/9　詳細追加UIに対応12/12 ユースケースサブモデル追加12/25 Rに基づいてOutput　○○の必要項目を定めるようにする3/19designItemにPTシステムレビュー向け全R項目が来た時の対応をする
+    # def add_new_study(self, project_id, phase_id, variation_id, study_id, R, designItem, usecase, usecase_submodel, TD, submodels, variables):#山口　新規スタディの追加 12/5 マップが紐づいているものを引き継げるように12/9　詳細追加UIに対応12/12 ユースケースサブモデル追加12/25 Rに基づいてOutput　○○の必要項目を定めるようにする3/19
+
+    #     now = datetime.datetime.now()
+    #     username=st.session_state.username
+    #     print(project_id)
+    #     try: 
+    #         cur = self.conn.cursor()
+
+                        
+    #         ## R(performance)名と一致するR_parameterレコード一覧を取得→一覧に登場するR_parameter.idに紐づくRFLからf_parameter.id, l_parameter.idを取得→それらがtest_senario_list_parameter.rflidに登場するtest_senario_list_parameter.id一覧を取得する
+    #         Rids_all = []
+    #         Fids_all = []
+    #         Lids_all = []
+    #         cur.execute(f"""select r_parameter.id as r_id, f_parameter.id as f_id, l_parameter.id as l_id
+    #                         from r_parameter
+    #                         join setup_r_relation on setup_r_Relation.r_parameter_id=r_parameter.id
+    #                         join rfl on rfl.requirement_s_id = setup_r_Relation.id
+    #                         join f_parameter on rfl.function_id = f_parameter.id
+    #                         join setup_l_relation on setup_l_relation.id = rfl.logic_s_id
+    #                         join l_parameter on l_parameter.id = setup_l_relation.l_parameter_id
+    #                         where r_parameter.id in (
+    #                             select id 
+    #                             from r_parameter 
+    #                             where performance = %s
+    #                         ); """, (R,))
+                        
+    #         result = cur.fetchall()
+    #         df_rflids = pd.DataFrame(result,columns = ['Rid','Fid','Lid'])
+    #         Rids = df_rflids['Rid'].tolist()
+    #         Fids = df_rflids['Fid'].tolist()
+    #         Lids = df_rflids['Lid'].tolist()
+    #         Rids_all+=Rids
+    #         Fids_all+=Fids
+    #         Lids_all+=Lids
+    #         #この時点で取れているIDは車両階層のみ、システム、ユニットまでをとれるようにする
+    #         while len(Lids)>=1:
+    #             print(Lids)
+    #             print('there must be more')
+    #             Lids_str_previous = ', '.join(f"{item}" for item in Lids)
+    #             cur.execute(f"""select r_parameter.id as rid, f_parameter.id as fid, child_l.id as lid
+    #                         from l_r_relation
+	# 						join setup_r_relation on setup_r_Relation.id=l_r_relation.r_s_id
+    #                         join r_parameter on r_parameter.id  = setup_r_relation.r_parameter_id
+                            
+    #                         join rfl on rfl.requirement_s_id = setup_r_Relation.id
+    #                         join f_parameter on rfl.function_id = f_parameter.id
+    #                         join setup_l_relation as parent_l_s on parent_l_s.id = l_r_relation.l_s_id
+	# 						join l_parameter as parent_l on parent_l.id= parent_l_s.l_parameter_id
+	# 						join setup_l_relation as child_l_s on child_l_s.id = rfl.logic_s_id
+    #                         join l_parameter as child_l on child_l.id = child_l_s.l_parameter_id
+    #                         where parent_l.id in ({Lids_str_previous})
+
+    #                         """)
+    #             result = cur.fetchall()
+    #             df_rflids = pd.DataFrame(result,columns = ['Rid','Fid', 'Lid'])
+    #             print(df_rflids)
+    #             print('how about that')
+    #             Rids = df_rflids['Rid'].tolist()
+    #             Fids = df_rflids['Fid'].tolist()
+    #             Lids = df_rflids['Lid'].tolist()
+    #             Rids_all+=Rids
+    #             Fids_all+=Fids
+    #             Lids_all+=Lids               
+                
+
+    #         Rids_str = ', '.join(f"{item}" for item in Rids_all)
+    #         Fids_str = ', '.join(f"{item}" for item in Fids_all)
+    #         Lids_str = ', '.join(f"{item}" for item in Lids_all)
+    #         print(Rids_str)
+           
+    #         cur.execute(f"""select id 
+    #                         from test_senario_list_parameter
+    #                         where (rflcategory = 'R' and rflid in ({Rids_str}))
+    #                         or (rflcategory = 'F' and rflid in ({Fids_str}))
+    #                         or (rflcategory = 'L' and rflid in ({Lids_str}));
+    #                     """)
+    #         result = cur.fetchall()
+    #         df_senario_output_ids= pd.DataFrame(result, columns=['id'])
+    #         print(df_senario_output_ids)
+    #         senario_output_ids = df_senario_output_ids['id'].tolist()
+    #         senario_output_ids_str = ', '.join(f"{item}" for item  in senario_output_ids)
+    #         st.write(senario_output_ids_str) 
+    #         cur.execute(f"""insert into test_project_senario_parameter(project_id, senario_parameter_id, phase_id, variation_id, study_id, updated_value)
+    #                        select distinct on (senario_parameter_id)%s, senario_parameter_id, %s, %s, %s, Null from test_project_senario_parameter where senario_parameter_id <= 10000;
+    #                         """,(project_id, phase_id, variation_id, study_id))#今までtest_project_senario_parameterに追加実績のあるものしか追加しない ここでの追加は入力パラメータ限定に 3/19　山口
+    #         ##Output項目の追加 3/19 山口
+    #         print('new study inserted')
+    #         cur.execute(f"""insert into test_project_senario_parameter(project_id, senario_parameter_id, phase_id, variation_id, study_id, updated_value)
+    #                         select %s, test_senario_list_parameter.id, %s, %s, %s, Null 
+    #                         from test_senario_list_parameter
+    #                         where test_senario_list_parameter.id in ({senario_output_ids_str})
+    #                         order by id;
+
+    #                     """, (project_id, phase_id, variation_id, study_id))
+    #         print('study output inserted')
+    #         cur.execute("""
+    #                        update test_project_senario_parameter set id=concat('sim',surid) where project_id=%s and phase_id=%s and variation_id=%s and study_id=%s;
+    #                        """, (project_id, phase_id, variation_id, study_id))
+    #         print('id updated')
+            
+    #         cur.execute("""
+    #                        update test_project_senario_parameter set updated_value = %s where project_id=%s and phase_id=%s and variation_id=%s and study_id=%s and senario_parameter_id=3;
+    #                     """, (designItem, project_id, phase_id, variation_id, study_id)) #性能行へのRアップデート
+    #         cur.execute("""
+    #                        update test_project_senario_parameter set updated_value = %s where project_id=%s and phase_id=%s and variation_id=%s and study_id=%s and senario_parameter_id=15;
+    #                     """, (R, project_id, phase_id, variation_id, study_id)) #山口　性能領域もほしかったので転記する2/6
+            
+            
+    #         print('R updated')
+    #         cur.execute("""
+    #                        update test_project_senario_parameter set updated_value = %s where project_id=%s and phase_id=%s and variation_id=%s and study_id=%s and senario_parameter_id=13;
+    #                     """, (TD, project_id, phase_id, variation_id, study_id)) #性能行へのTDアップデート
+    #         cur.execute("""
+    #                        update test_project_senario_parameter set updated_value = %s where project_id=%s and phase_id=%s and variation_id=%s and study_id=%s and senario_parameter_id=14;
+    #                     """, (usecase, project_id, phase_id, variation_id, study_id)) #性能行へのusecaseアップデ
+    #         cur.execute("""
+    #                        update test_project_senario_parameter set updated_value = %s where project_id=%s and phase_id=%s and variation_id=%s and study_id=%s and senario_parameter_id=70;
+    #                     """, (usecase_submodel, project_id, phase_id, variation_id, study_id)) #性能行へのusecaseモデルアップデ
+    #         print('usecase updated')
+            
+    #         #ここでサブモデル名も入れるべきだと思うが現状行がないためスキップ
+            
+    #         for variabledics in variables:
+            
+    #             for i,dic in enumerate(variabledics):
+    #                 senario_parameter_id = list(dic.keys())[0]
+    #                 value = list(dic.values())[0]
+    #                 cur.execute("""
+    #                            update test_project_senario_parameter set updated_value = %s where project_id=%s and phase_id=%s and variation_id=%s and study_id=%s and senario_parameter_id=%s;
+    #                         """, (value, project_id, phase_id, variation_id, study_id, senario_parameter_id)) #性能行へのusecaseアップデート
+                        
+
+            
+    #         cur.execute("""
+    #                        insert into detail_data_sim(id, employee_number, update_day, user_memo, value)
+    #                        select id, %s, %s, 'new study', Null from test_project_senario_parameter where project_id=%s and phase_id=%s and variation_id=%s and study_id=%s;
+    #                        """, (username, now, project_id, phase_id, variation_id, study_id))
+    #         print('logged')
+                
+    #     except InterfaceError as e:
+    #         raise e
+    #         # 接続が閉じられている場合、再接続を試みる
+    #         self.conn = self.create_connection()
+    #         if self.conn:
+    #             return self.column_to_list(query)
+    #         else:
+    #             return None
+    #     except psycopg2.Error as e:
+            
+    #         # エラー発生時にロールバック
+    #         self.conn.rollback()
+    #         raise e #raise分の位置を帰る　山口　10/25
+    #         return None
+        
+    #     self.conn.commit()
+    #     if cur:
+    #         cur.close()  
+
+
+    #Kyaw 07/04 Update
+    def add_new_study(self, project_id, phase_id, variation_id, study_id, R, designItem, usecase, usecase_submodel, TD, submodels, variables):#山口 新規スタディの追加 12/5 マップが紐づいているものを引き継げるように12/9 詳細追加UIに対応12/12 ユースケースサブモデル追加12/25 Rに基づいてOutput ○○の必要項目を定めるようにする3/19
 
         now = datetime.datetime.now()
         username=st.session_state.username
@@ -2265,9 +2631,7 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             Rids_all = []
             Fids_all = []
             Lids_all = []
-
-            if R != 'PTシステムレビュー向け全R項目':
-                cur.execute(f"""select r_parameter.id as r_id, f_parameter.id as f_id, l_parameter.id as l_id
+            cur.execute(f"""select r_parameter.id as r_id, f_parameter.id as f_id, l_parameter.id as l_id
                             from r_parameter
                             join setup_r_relation on setup_r_Relation.r_parameter_id=r_parameter.id
                             join rfl on rfl.requirement_s_id = setup_r_Relation.id
@@ -2279,12 +2643,7 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
                                 from r_parameter 
                                 where performance = %s
                             ); """, (R,))
-            else: #全R性能だったら、すべてのprojectに紐づくRだけを取る
-                cur.execute(f"""select r_parameter.id as r_id, '' as f_id, '' as l_id
-                                from r_parameter
-                                join project_r_parameter on r_parameter_id = r_parameter.id
-                                where project_id = %s and phase_id = %s and variation_id = %s
-                               ; """, (project_id, phase_id, variation_id))
+                        
             result = cur.fetchall()
             df_rflids = pd.DataFrame(result,columns = ['Rid','Fid','Lid'])
             Rids = df_rflids['Rid'].tolist()
@@ -2293,42 +2652,63 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             Rids_all+=Rids
             Fids_all+=Fids
             Lids_all+=Lids
+            #この時点で取れているIDは車両階層のみ、システム、ユニットまでをとれるようにする
+            # while len(Lids)>=1:
+            #     print(Lids)
+            #     print('there must be more')
+            #     #山口 現状l_r_relationが階層間で無限ループになってしまっている。延々とクエリを投げることを防ぐため、明示的に階層を指定するように 6/24
+            #     hierarchy_id = 2
+            #     Lids_str_previous = ', '.join(f"{item}" for item in Lids)
+            #     cur.execute(f"""select r_parameter.id as rid, f_parameter.id as fid, child_l.id as lid
+            #                 from l_r_relation
+            #     join setup_r_relation on setup_r_Relation.id=l_r_relation.r_s_id
+            #                 join r_parameter on r_parameter.id  = setup_r_relation.r_parameter_id
+                            
+            #                 join rfl on rfl.requirement_s_id = setup_r_Relation.id
+            #                 join f_parameter on rfl.function_id = f_parameter.id
+            #                 join setup_l_relation as parent_l_s on parent_l_s.id = l_r_relation.l_s_id
+            #     join l_parameter as parent_l on parent_l.id= parent_l_s.l_parameter_id
+            #     join setup_l_relation as child_l_s on child_l_s.id = rfl.logic_s_id
+            #                 join l_parameter as child_l on child_l.id = child_l_s.l_parameter_id
+            #                 where parent_l.id in ({Lids_str_previous}) and hierarchy_id = {hierarchy_id}
+
+            #                 """)
+            #     result = cur.fetchall()
+            #     df_rflids = pd.DataFrame(result,columns = ['Rid','Fid', 'Lid'])
+            #     print(df_rflids)
+            #     print('how about that')
+            #     Rids = df_rflids['Rid'].tolist()
+            #     Fids = df_rflids['Fid'].tolist()
+            #     Lids = df_rflids['Lid'].tolist()
+            #     Rids_all+=Rids
+            #     Fids_all+=Fids
+            #     Lids_all+=Lids               
+            #     hierarchy_id += 1
 
             Rids_str = ', '.join(f"{item}" for item in Rids_all)
             Fids_str = ', '.join(f"{item}" for item in Fids_all)
             Lids_str = ', '.join(f"{item}" for item in Lids_all)
             print(Rids_str)
             #山口 input項目をRFLと紐づけると、以下のクエリでIDを拾ってくることになり、重複Insertをしようとすることでエラーにつながっていた。明示的にparameter_name_1が'Output'とつくものに限定することで防ぐ 4/3 
-            if R != 'PTシステムレビュー向け全R項目':
-                cur.execute(f"""select id 
-                                from test_senario_list_parameter
-                                where (
-                                (rflcategory = 'R' and rflid in ({Rids_str}))
-                                or (rflcategory = 'F' and rflid in ({Fids_str}))
-                                or (rflcategory = 'L' and rflid in ({Lids_str}))
-                                )
-                                and parameter_name_1 like 'Output %';
-                            """)
-            else: #全R性能だったら、すべてのRだけを取る
-                cur.execute(f"""select id 
-                                from test_senario_list_parameter
-                                where (
-                                (rflcategory = 'R' and rflid in ({Rids_str}))
-                                or
-                                (id in (300000,300001,300002,400000,400001,401000,401001))
-                                )
-                                and parameter_name_1 like 'Output %';
-                            """)
+            cur.execute(f"""select id 
+                            from test_senario_list_parameter
+                            where (
+                            (rflcategory = 'R' and rflid in ({Rids_str}))
+                            or (rflcategory = 'F' and rflid in ({Fids_str}))
+                            or (rflcategory = 'L' and rflid in ({Lids_str}))
+                            )
+                            and parameter_name_1 like 'Output %';
+                        """)
             result = cur.fetchall()
             df_senario_output_ids= pd.DataFrame(result, columns=['id'])
             print(df_senario_output_ids)
             senario_output_ids = df_senario_output_ids['id'].tolist()
             senario_output_ids_str = ', '.join(f"{item}" for item  in senario_output_ids)
-            #st.write(senario_output_ids_str) 
+            st.write(senario_output_ids_str) 
             cur.execute(f"""insert into test_project_senario_parameter(project_id, senario_parameter_id, phase_id, variation_id, study_id, updated_value)
                            select distinct on (senario_parameter_id)%s, senario_parameter_id, %s, %s, %s, Null from test_project_senario_parameter where senario_parameter_id <= 10000;
-                            """,(project_id, phase_id, variation_id, study_id))#今までtest_project_senario_parameterに追加実績のあるものしか追加しない ここでの追加は入力パラメータ限定に 3/19　山口
-            ##Output項目の追加 3/19 山口
+                            """,(project_id, phase_id, variation_id, study_id))#今までtest_project_senario_parameterに追加実績のあるものしか追加しない ここでの追加は入力パラメータ限定に 3/19 山口
+            ##Output項目の追加 3/19 山口 
             print('new study inserted')
             cur.execute(f"""insert into test_project_senario_parameter(project_id, senario_parameter_id, phase_id, variation_id, study_id, updated_value)
                             select %s, test_senario_list_parameter.id, %s, %s, %s, Null 
@@ -2348,7 +2728,7 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
                         """, (designItem, project_id, phase_id, variation_id, study_id)) #性能行へのRアップデート
             cur.execute("""
                            update test_project_senario_parameter set updated_value = %s where project_id=%s and phase_id=%s and variation_id=%s and study_id=%s and senario_parameter_id=15;
-                        """, (R, project_id, phase_id, variation_id, study_id)) #山口　性能領域もほしかったので転記する2/6
+                        """, (R, project_id, phase_id, variation_id, study_id)) #山口 性能領域もほしかったので転記する2/6
             
             
             print('R updated')
@@ -2394,12 +2774,13 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             
             # エラー発生時にロールバック
             self.conn.rollback()
-            raise e #raise分の位置を帰る　山口　10/25
+            raise e #raise分の位置を帰る 山口 10/25
             return None
         
         self.conn.commit()
         if cur:
-            cur.close()  
+            cur.close() 
+
 
     def get_td_list(self):#使用できるTechnicalDefinitionの一覧を取得する
     
@@ -2495,19 +2876,59 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             if len(df_parameters)>0:
                 return df_parameters
             else:
-                query ="select distinct  on (id, parameter_name_2, parameter_name) id, parameter_name_2, parameter_name,"
+                # query ="select distinct  on (id, parameter_name_2, parameter_name) id, parameter_name_2, parameter_name,"
 
-                query = query + " scope from test_senario_list_parameter where"
-                query = query + "  scope = %s"
-                if mode=='SCALAR':
-                    query = query + " and parameter_name not like 'Map';"
-                elif mode=='MAP':
-                    query = query + " and parameter_name like 'Map';"
-                cur.execute(query, (scope,))
+                # query = query + " scope from test_senario_list_parameter where"
+                # query = query + "  scope = %s"
+                # if mode=='SCALAR':
+                #     query = query + " and parameter_name not like 'Map';"
+                # elif mode=='MAP':
+                #     query = query + " and parameter_name like 'Map';"
+                # cur.execute(query, (scope,))
+                # result = cur.fetchall()
+                # print(result)
+                # df_parameters = pd.DataFrame(result,columns=['senario_parameter_id','parameter_name_2','parameter_unit', 'scope'])
+                # df_parameters['original_value'] = None
+                # return df_parameters
+
+                #Kyaw 07/04 Update
+                query = """
+                SELECT DISTINCT ON (tslp.id, tslp.parameter_name_2, tslp.parameter_name)
+                    tslp.id AS senario_parameter_id,
+                    tslp.parameter_name_2,
+                    tslp.parameter_name AS parameter_unit,
+                    tslp.scope AS scope,
+                    pp.value AS original_value
+                FROM test_senario_list_parameter tslp
+                LEFT JOIN project_parameter pp 
+                    ON tslp.parent_id = pp.se_parameter_id
+                    AND pp.project_id = %s
+                    AND pp.phase_id = %s
+                    AND pp.variation_id = %s
+                WHERE tslp.scope = %s
+                AND tslp.category = %s
+                """
+
+                # Add parameter_name condition with hardcoded 'Map'
+                if mode == 'SCALAR':
+                    query += " AND tslp.parameter_name NOT LIKE 'Map'"
+                elif mode == 'MAP':
+                    query += " AND tslp.parameter_name LIKE 'Map'"
+
+                query += """
+                ORDER BY tslp.id;
+                """
+
+                params = (project_id, phase_id, variation_id, scope, 'SE')
+                cur.execute(query, params)
                 result = cur.fetchall()
+
                 print(result)
-                df_parameters = pd.DataFrame(result,columns=['senario_parameter_id','parameter_name_2','parameter_unit', 'scope'])
-                df_parameters['original_value'] = None
+                # Get column names from cursor
+                columns = [desc[0] for desc in cur.description]
+
+                # Create DataFrame
+                df_parameters = pd.DataFrame(result, columns=columns)
                 return df_parameters
                 
         except psycopg2.Error as e:
@@ -2715,20 +3136,13 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
         drivetrain_selects = df1[['drivetrain_id', 'drivetrain']].drop_duplicates().sort_values(by='drivetrain_id') #チョー　05/07　サマリーのDrivetrainDropdownのため
         #チョー　03/10
         # df_pj_list = df_selects 
-
-        # df_pj_list = df1[['project_id', 'project_code','destination','phase_id','variation_id','drivetrain', 'phase', 'variation','lot']].drop_duplicates()
-        
-        # # print('df_pj_list before:',df_pj_list)
-        # df_pj_list['r_selectbox_format'] = df_pj_list.apply(lambda row: f"{row['project_code']}; {row['destination']}; {row['drivetrain']}; {row['lot']}; {row['phase']}; {row['variation']}", axis=1)
-        # # print('df_pj_list after:',df_pj_list)
-
         df_pj_list = df1[['project_id', 'project_code','destination','phase_id','variation_id','drivetrain', 'phase', 'variation','lot','setup_id']].drop_duplicates() #add setup_id #10/20
         #10/20
         if not select_list_str6: #no need to duplicate the prj list when selected from the dropdown
             st.session_state.total_rlist_prj = df_pj_list
-        # print('df_pj_list before:',df_pj_list)
+        print('df_pj_list before:',df_pj_list)
         df_pj_list['r_selectbox_format'] = df_pj_list.apply(lambda row: f"{row['project_code']}; {row['destination']}; {row['drivetrain']}; {row['lot']}; {row['phase']}; {row['variation']}", axis=1)
-        # print('df_pj_list after:',df_pj_list)
+        print('df_pj_list after:',df_pj_list)
         
         if not select_list_str6:
             options = df_pj_list['r_selectbox_format'].tolist()
@@ -2755,7 +3169,7 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
         num_selects = len(df_selects)
         print('num_selects:' + str(num_selects))
 
-        self.get_resized_column(df_selects) #Kyaw 07/23 Get the resized columns #10/29 merge#5
+        self.get_resized_column(df_selects) #Kyaw 07/23 Get the resized columns
 
         r_parameter_id_query = "COALESCE("
         performance_query = "COALESCE("
@@ -3527,7 +3941,11 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
                             rfl_view.index as c_index,
                             rfl_view.req_condition as c_req_condition, -- ＃チョー 05/19
                             rfl_view.fun_condition as c_fun_condition, -- ＃チョー 05/19
-                            rfl_view.log_condition as c_log_condition  -- ＃チョー 05/19
+                            rfl_view.log_condition as c_log_condition,  -- ＃チョー 05/19
+                            rfl_view.is_to as c_is_to,
+                            rfl_view.to_pattern as c_to_pattern,
+                            rfl_view.perf_is_to as c_perf_is_to,
+                            rfl_view.perf_to_pattern as c_perf_to_pattern
                         FROM rfl_view
                         INNER JOIN pj ON rfl_view.pj_id = pj.project_id
                         INNER JOIN phase on phase_id = phase.id
@@ -3585,7 +4003,11 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
                             rfl_view.index as s_index,
                             rfl_view.req_condition as s_req_condition, -- ＃チョー 05/19
                             rfl_view.fun_condition as s_fun_condition, -- ＃チョー 05/19
-                            rfl_view.log_condition as s_log_condition  -- ＃チョー 05/19
+                            rfl_view.log_condition as s_log_condition,  -- ＃チョー 05/19
+                            rfl_view.is_to as s_is_to,
+                            rfl_view.to_pattern as s_to_pattern,
+                            rfl_view.perf_is_to as s_perf_is_to,
+                            rfl_view.perf_to_pattern as s_perf_to_pattern
                         FROM
                             rfl_view
                         INNER JOIN pj on rfl_view.pj_id = pj.project_id  
@@ -3645,7 +4067,11 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
                             rfl_view.index as u_index,
                             rfl_view.req_condition as u_req_condition, -- ＃チョー 05/19
                             rfl_view.fun_condition as u_fun_condition, -- ＃チョー 05/19
-                            rfl_view.log_condition as u_log_condition  -- ＃チョー 05/19
+                            rfl_view.log_condition as u_log_condition,  -- ＃チョー 05/19
+                            rfl_view.is_to as u_is_to,
+                            rfl_view.to_pattern as u_to_pattern,
+                            rfl_view.perf_is_to as u_perf_is_to,
+                            rfl_view.perf_to_pattern as u_perf_to_pattern
                         FROM
                             rfl_view
                         INNER JOIN pj on rfl_view.pj_id = pj.project_id 
@@ -3674,7 +4100,11 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
                         --FULL OUTER JOIN unit_table as u on s.s_allocation = u.u_r_s_id 山口　ユニット階層の紐づけをWP_idではなくl_r_relationベースで行う4/17
                         LEFT JOIN l_r_table as su_l_r on s.s_l_s_id = su_l_r.l_s_id
                         FULL OUTER JOIN unit_table as u on u.u_r_s_id = su_l_r.r_s_id
-                        --WHERE l_r.r_s_id IS NOT NULL AND l_r.l_s_id IS NOT NULL           
+                        --WHERE l_r.r_s_id IS NOT NULL AND l_r.l_s_id IS NOT NULL 
+                        WHERE
+                            (v.c_allocation IS NOT NULL AND s.s_r_s_id IS NOT NULL AND v.c_allocation = s.s_r_s_id)
+                            OR
+                            (v.c_allocation IS NULL OR s.s_r_s_id IS NULL)          
                         ORDER BY v.c_r_wp_id,c_l_s_id,s_l_s_id;
                     """
             
@@ -4042,7 +4472,7 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             where prp.project_id in ({project_id_list}) and prp.phase_id in ({phase_id_list}) and prp.judge is not null and prp.judge != ''
             order by prp.phase_id,rp.id asc
         """
-        # print('Queryy2: ', query1)
+        print('Queryy2: ', query1)
         df2 = pd.read_sql_query(query1, connection)
         return df_selects,df2
     
@@ -4091,278 +4521,48 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             cur.close() 
             return True
         
-    #山口　　サロゲートモデルパス取得用関数作成 7/2
-    #山口　　複数プロジェクトに対応 7/4
-    def get_surrogate_model_path(self, project_ids, phase_ids):
-        project_ids_str = ', '.join(str(id) for id in project_ids)
-        phase_ids_str = ', '.join(str(id) for id in phase_ids)
-        try:
-            connection = self.conn
 
-            query = f"SELECT * FROM surrogate_model_path WHERE project_id in ({project_ids_str}) AND phase_id in ({phase_ids_str});"
-            print(query)
-            df = pd.read_sql_query(query,connection)
-            df.columns = ['project_id', 'phase_id', 'surrogate_model_path','macro','output_surrogate_model_parameter_id']
-            return df
-        except psycopg2.Error as e:
-
-            self.conn.rollback()
-            raise e
-
-    def get_surrogate_model_view(self, project_ids, phase_ids):
-        project_ids_str = ', '.join(str(id) for id in project_ids)
-        phase_ids_str = ', '.join(str(id) for id in phase_ids)
-        try:
-            connection = self.conn
-
-            query = f"SELECT * FROM surrogate_model_view WHERE project_id in ({project_ids_str}) AND phase_id in ({phase_ids_str});"
-            print(query)
-            df = pd.read_sql_query(query,connection)
-            df.columns = ['project_id', 'phase_id', 'surrogate_model_path','macro','output_surrogate_model_parameter_id', 'output_parameter_name', 'output', 'input_surrogate_model_parameter_id', 'input_parameter_name', 'input', 'min_input', 'max_input']
-            return df
-        except psycopg2.Error as e:
-
-            self.conn.rollback()
-            raise e
-            
-    def get_sampling_path(self, project_ids, phase_ids):
-        project_ids_str = ', '.join(str(id) for id in project_ids)
-        phase_ids_str = ', '.join(str(id) for id in phase_ids)
-        try:
-            connection = self.conn
-
-            query = f"SELECT * FROM sampling_data_path WHERE project_id in ({project_ids_str}) AND phase_id in ({phase_ids_str});"
-            print(query)
-            df = pd.read_sql_query(query,connection)
-            df.columns = ['project_id', 'phase_id', 'sampling_data_path']
-            return df
-        except psycopg2.Error as e:
-
-            self.conn.rollback()
-            raise e
-    
-        
-    #山口　　Jカーブ用コストビュー取得関数7/2
-    #複数プロジェクトに対応7/4
-    #コストレートに対応7/14
-    def get_cost_view(self, project_ids):
-        ids_str = ', '.join(str(id) for id in project_ids)
-        try:
-            connection = self.conn
-
-            query = f"SELECT * FROM cost_view WHERE project_id in ({ids_str});"
-            print(query)
-            df = pd.read_sql_query(query,connection)
-            df.columns = ['project_id', 'cost_item_id', 'item_name_1', 'item_name_2', 'item_name_3', 'item_name_4','original_cost','cost_rate_id','cost_rate_name','cost_rate', 'unit', 'cost', 'surrogate_model_parameter_id', 'parameter_name', 'unit_id','effect']
-            return df
-        except psycopg2.Error as e:
-
-            self.conn.rollback()
-            raise e
-    
-    #山口　コストレート一覧取得用7/15
-    def get_cost_rate(self):
-        try:
-            connection = self.conn
-
-            query = f"SELECT * FROM cost_rate;"
-            print(query)
-            df = pd.read_sql_query(query,connection)
-            df.columns = ['id', 'rate_name', 'rate', 'unit']
-            return df
-        except psycopg2.Error as e:
-
-            self.conn.rollback()
-            raise e
-
-    #山口　サロゲートモデルパラメータ一覧取得用7/15
-    def get_surrogate_model_parameter(self):
-        try:
-            connection = self.conn
-
-            query = f"SELECT * FROM surrogate_model_parameter;"
-            print(query)
-            df = pd.read_sql_query(query,connection)
-            df.columns = ['surrogate_model_parameter_id', 'parameter_name', 'unit_id', 'input_or_output']
-            return df
-        except psycopg2.Error as e:
-
-            self.conn.rollback()
-            raise e
-
-    #山口　ｋコストアイテム覧取得用7/15
-    def get_cost_item(self):
-        try:
-            connection = self.conn
-
-            query = f"SELECT * FROM cost_item;"
-            print(query)
-            df = pd.read_sql_query(query,connection)
-            df.columns = ['id', 'item_name_1', 'item_name_2', 'item_name_3', 'item_name_4']
-            return df
-        except psycopg2.Error as e:
-
-            self.conn.rollback()
-            raise e
-   
-       #プロジェクトコスト情報アップてーとする関数
-    #新奇作成にも対応させる　
-    def update_project_cost_item(self, df_cost_to_update):
-
-        try:
-            cur = self.conn.cursor()
-            for i, row in df_cost_to_update.iterrows():
-                project_id = row['project_id'] 
-                project_id_original = row['project_id_original']
-                cost_item_id = row['id']
-                cost_item_id_original = row['id_original']
-                cost = row['original_cost']
-                surrogate_model_parameter_id = row['surrogate_model_parameter_id']
-                surrogate_model_parameter_id_original = row['surrogate_model_parameter_id_original']
-                effect = row['parameter_change_amount']
-                cost_rate_id = row['cost_rate_id']
-                print(project_id_original)                
-
-                if math.isnan(project_id_original): #新規追加列であった場合、project_id_originalはNoneになる。
-                    print('new row inserted')
-                    project_id_original = project_id
-                    cost_item_id_original = cost_item_id
-                    surrogate_model_parameter_id_original = surrogate_model_parameter_id
+    #kyaw-rfl
+    def upd_rfl_summary_to_result(self,df):
+        cur = None
+        for index, row in df.iterrows():
+            try:
+                # Set is_to based on to_pattern
+                if row['to_pattern'] != 'TO':
+                    row['is_to'] = False
+                else:
+                    row['is_to'] = True
                 
-                query_text = sql.SQL("update project_cost_item set project_id = %s, cost_item_id = %s, cost = %s,  cost_rate_id = %s where project_id=%s and cost_item_id=%s;")
-                print(query_text, project_id, cost_item_id, cost, cost_rate_id,project_id_original, cost_item_id_original)
-                cur.execute(query_text,(project_id, cost_item_id, cost, cost_rate_id,project_id_original, cost_item_id_original))
-                #アップデートできたレコードの数によって分岐
-                if cur.rowcount == 0:
-                    print("no record to update in project_cost_item, insert new one")
-                    query_text = sql.SQL("insert into project_cost_item values(%s, %s, %s, %s);")
-                    print(query_text,project_id, cost_item_id, cost, cost_rate_id)
-                    cur.execute(query_text,(project_id, cost_item_id, cost, cost_rate_id))
+                # Set perf_is_to based on perf_to_pattern
+                if row['perf_to_pattern'] != 'TO':
+                    row['perf_is_to'] = False
+                else:
+                    row['perf_is_to'] = True
+                
+                cur = self.conn.cursor()
+                # Update prj_rfl table using composite key: project_info_id, phase_id, rfl_id
+                query = sql.SQL("""
+                        UPDATE prj_rfl 
+                        SET is_to = %s, to_pattern = %s, perf_is_to = %s, perf_to_pattern = %s 
+                        WHERE project_info_id = %s AND phase_id = %s AND rfl_id = %s
+                    """)
+                print('query upd to result: ', query)
+                cur.execute(query, (row['is_to'], row['to_pattern'], row['perf_is_to'], row['perf_to_pattern'], 
+                                   int(row['project_id']), int(row['phase_id']), int(row['rfl_id'])))
+            except psycopg2.Error as e:
 
-                query_text = sql.SQL("update project_cost_item_effect set project_id = %s, cost_item_id = %s, surrogate_model_parameter_id = %s, effect = %s where project_id=%s and cost_item_id=%s and surrogate_model_parameter_id=%s;")
-                print(query_text, project_id, cost_item_id, surrogate_model_parameter_id, effect, project_id_original, cost_item_id_original, surrogate_model_parameter_id_original)
-                cur.execute(query_text,(project_id, cost_item_id, surrogate_model_parameter_id, effect, project_id_original, cost_item_id_original, surrogate_model_parameter_id_original))
-                if cur.rowcount == 0:#該当するレコードがなければ、新規追加
-                    print("no record to update in project_cost_item_effect, insert new one")
-                    query_text = sql.SQL("insert into project_cost_item_effect values(%s, %s, %s, %s);")
-                    print(query_text, project_id, cost_item_id, surrogate_model_parameter_id, effect)
-                    cur.execute(query_text, (project_id, cost_item_id, surrogate_model_parameter_id, effect))
-
-        except InterfaceError as e:
-            raise e
-            # 接続が閉じられている場合、再接続を試みる
-            self.conn = self.create_connection()
-            if self.conn:
-                return self.column_to_list(query)
-            else:
+                # エラー発生時にロールバック
+                self.conn.rollback()
+                raise e
                 return None
-        except psycopg2.Error as e:
             
-            # エラー発生時にロールバック
-            self.conn.rollback()
-            raise e #raise分の位置を帰る　山口　10/25
-            return None
-        
         self.conn.commit()
         if cur:
-            cur.close()      
-    
-    def delete_project_cost_item(self, df_cost_to_delete):
+            cur.close() 
+            return True
         
-        try:
-            cur = self.conn.cursor()
-            connection =self.conn
-            for i, row in df_cost_to_delete.iterrows():
-                project_id_original = row['project_id_original'] 
-                cost_item_id_original = row['id_original']
-                surrogate_model_parameter_id_original = row['surrogate_model_parameter_id_original']
-                
-                #先にproject_cost_item_effectから削除する。project_cost_item_effectにまだ情報があるのにproject_cost_itemから削除することを避けるため
-                query_text = sql.SQL("delete from project_cost_item_effect where project_id = %s and cost_item_id = %s and surrogate_model_parameter_id = %s;")
-                print(query_text, project_id_original, cost_item_id_original, surrogate_model_parameter_id_original)
-                cur.execute(query_text,(project_id_original, cost_item_id_original, surrogate_model_parameter_id_original))
-                #同じProject_id, cost_item_idのアイテムがほかにあるか探す
-                query_text = f"select * from project_cost_item_effect where project_id = {project_id_original} and cost_item_id = {cost_item_id_original};"
-                df = pd.read_sql_query(query_text, connection)
-                if len(df) == 0:
-                    print("no record left in project_cost_item_effect, deleting from project_cost_item")
-                    query_text = sql.SQL("delete from project_cost_item_effect where project_id = %s and cost_item_id = %s;")
-                    print(query_text,project_id_original, cost_item_id_original)
-                    cur.execute(query_text,(project_id_original, cost_item_id_original))
 
-        except InterfaceError as e:
-            raise e
-            # 接続が閉じられている場合、再接続を試みる
-            self.conn = self.create_connection()
-            if self.conn:
-                return self.column_to_list(query)
-            else:
-                return None
-        except psycopg2.Error as e:
-            
-            # エラー発生時にロールバック
-            self.conn.rollback()
-            raise e #raise分の位置を帰る　山口　10/25
-            return None
-        
-        self.conn.commit()
-        if cur:
-            cur.close()     
-
-    def get_usecase_detail(self, usecase_name):
-
-        try:
-            connection = self.conn
-            query = f"SELECT usecase.usecase, usecase_id, usecase_parameter_id, value FROM usecase JOIN usecase_detail ON usecase_id = usecase.id where usecase.usecase = '{usecase_name}' order by usecase_parameter_id;"
-            print(query)
-            df = pd.read_sql_query(query, connection)
-            
-            df.columns = ['usecase','usecase_id', 'usecase_detail_id', 'value']
-            return df
-        except psycopg2.Error as e:
-
-            self.conn.rollback()
-            raise e
-         
-
-    #山口　　ユースケース名に付随する詳細を取得する7/7
-    def get_usecase_td(self, usecase_name):
-
-        try:
-            connection = self.conn
-            df1 = self.get_usecase_detail(usecase_name) 
-                       #id=26がTDの名前、このTDに紐づくparameter_submodel_relationを入手する
-            if len(df1)==0:
-                st.error('走行パターン名' + usecase_name + 'のパラメータ情報が見つかりませんでした。走行パターン名の入力を見直してください。')
-                return []
-            TD_name = df1[df1['usecase_detail_id']==26]['value'].tolist()[0]
-            df2 = self.get_parameter_submodel_relation(TD_name)
-            df2 = df2[df2['category']=='USECASE']
-            df = pd.merge(df1,df2,how='left', left_on='usecase_detail_id', right_on='parameter_id')    
-            return df
-        except psycopg2.Error as e:
-
-            self.conn.rollback()
-            raise e
-        
-    
-
-    #山口　　TD名に付随する詳細を取得する7/7
-    def get_parameter_submodel_relation(self, TD_name):
-        try:
-            connection = self.conn
-            query = f"SELECT submodel, category, parameter_id, variable_name FROM parameter_submodel_relation where submodel = '{TD_name}';"
-            print(query)
-            df = pd.read_sql_query(query, connection)
-            df.columns = ['submodel','category', 'parameter_id', 'variable_name']
-            return df
-        except psycopg2.Error as e:
-
-            self.conn.rollback()
-            raise e
-
-
-    #Kyaw 07/23 #Get RList resized column　#10/29 merge#5
+    #Kyaw 07/23 #Get RList resized column
     def get_resized_column(self,df):
         connection = self.conn
         # Assuming df_selects has only one row
@@ -4388,106 +4588,188 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
         )
 
         resize_column_result = pd.read_sql_query(resize_column_query, connection, params=resize_column_params)
-        # print('resized column r:', resize_column_result)
+        print('resized column r:', resize_column_result)
 
         st.session_state.resize_column_result = resize_column_result
 
     #Kyaw 07/23 insert/Update the resized column of Rlist
     def insert_edit_column(self, project_info_id, phase_id, variation_id, employee_number, col_ids, widths, hides, toggle_on):
-        print(f'col_ids: {col_ids} and widths: {widths}')
-        cur = None
-        try:
-            cur = self.conn.cursor()
+            print(f'col_ids: {col_ids} and widths: {widths}')
+            cur = None
+            try:
+                cur = self.conn.cursor()
 
-            category = 'R'
-            status = 'Personalモード' if toggle_on else 'Defaultモード'
-            print(f'status: {status}')
+                category = 'R'
+                status = 'Personalモード' if toggle_on else 'Defaultモード'
+                print(f'status: {status}')
 
-            #Special case: no col_ids and toggle is OFF → update all rows to Defaultモード
-            if not col_ids and not toggle_on:
-                print('is that workkk')
-                update_all_query = sql.SQL("""
-                    UPDATE column_resized_tbl
-                    SET status = 'Defaultモード', is_hide = NULL
-                    WHERE project_info_id = %s
-                    AND phase_id = %s
-                    AND variation_id = %s
-                    AND employee_number = %s
-                """)
-                cur.execute(update_all_query, (int(project_info_id), int(phase_id), int(variation_id), str(employee_number)))
-                self.conn.commit()
-                return True
-
-            if col_ids:
-                #Upsert current columns
-                upsert_query = sql.SQL("""
-                    INSERT INTO column_resized_tbl (
-                        project_info_id, phase_id, variation_id, employee_number, edit_column, column_width, category, status, is_hide
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (project_info_id, phase_id, variation_id, employee_number, edit_column)
-                    DO UPDATE SET column_width = EXCLUDED.column_width, category = EXCLUDED.category, status = EXCLUDED.status, is_hide = EXCLUDED.is_hide
-                """)
-
-                data = [
-                    (
-                        int(project_info_id),
-                        int(phase_id),
-                        int(variation_id),
-                        employee_number,
-                        col_id,
-                        int(width),
-                        category,
-                        status,
-                        hides
-                    )
-                    for col_id, width,hides in zip(col_ids, widths,hides)
-                ]
-
-                cur.executemany(upsert_query, data)
-
-                # 2. Update rows not in col_ids → set status = 'Defaultモード'
-                if col_ids:
-                    update_status_query = sql.SQL("""
+                #Special case: no col_ids and toggle is OFF → update all rows to Defaultモード
+                if not col_ids and not toggle_on:
+                    print('is that workkk')
+                    update_all_query = sql.SQL("""
                         UPDATE column_resized_tbl
-                        SET status = 'Defaultモード',is_hide = NULL
+                        SET status = 'Defaultモード', is_hide = NULL
                         WHERE project_info_id = %s
                         AND phase_id = %s
                         AND variation_id = %s
                         AND employee_number = %s
-                        AND edit_column NOT IN ({})
-                    """).format(
-                        sql.SQL(',').join(sql.Placeholder() * len(col_ids))
-                    )
+                    """)
+                    cur.execute(update_all_query, (int(project_info_id), int(phase_id), int(variation_id), str(employee_number)))
+                    self.conn.commit()
+                    return True
 
-                    update_params = [
-                        int(project_info_id),
-                        int(phase_id),
-                        int(variation_id),
-                        str(employee_number),
-                        *[str(col) for col in col_ids]
+                if col_ids:
+                    #Upsert current columns
+                    upsert_query = sql.SQL("""
+                        INSERT INTO column_resized_tbl (
+                            project_info_id, phase_id, variation_id, employee_number, edit_column, column_width, category, status, is_hide
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (project_info_id, phase_id, variation_id, employee_number, edit_column)
+                        DO UPDATE SET column_width = EXCLUDED.column_width, category = EXCLUDED.category, status = EXCLUDED.status, is_hide = EXCLUDED.is_hide
+                    """)
+
+                    data = [
+                        (
+                            int(project_info_id),
+                            int(phase_id),
+                            int(variation_id),
+                            employee_number,
+                            col_id,
+                            int(width),
+                            category,
+                            status,
+                            hides
+                        )
+                        for col_id, width,hides in zip(col_ids, widths,hides)
                     ]
 
-                    cur.execute(update_status_query, update_params)
+                    cur.executemany(upsert_query, data)
 
-            self.conn.commit()
-            return True
+                    # 2. Update rows not in col_ids → set status = 'Defaultモード'
+                    if col_ids:
+                        update_status_query = sql.SQL("""
+                            UPDATE column_resized_tbl
+                            SET status = 'Defaultモード',is_hide = NULL
+                            WHERE project_info_id = %s
+                            AND phase_id = %s
+                            AND variation_id = %s
+                            AND employee_number = %s
+                            AND edit_column NOT IN ({})
+                        """).format(
+                            sql.SQL(',').join(sql.Placeholder() * len(col_ids))
+                        )
 
-        except psycopg2.Error as e:
-            if self.conn:
-                self.conn.rollback()
-            print(f"Database error: {e}")
-            raise e
+                        update_params = [
+                            int(project_info_id),
+                            int(phase_id),
+                            int(variation_id),
+                            str(employee_number),
+                            *[str(col) for col in col_ids]
+                        ]
 
-        finally:
-            if cur:
-                cur.close()   
+                        cur.execute(update_status_query, update_params)
+
+                self.conn.commit()
+                return True
+
+            except psycopg2.Error as e:
+                if self.conn:
+                    self.conn.rollback()
+                print(f"Database error: {e}")
+                raise e
+
+            finally:
+                if cur:
+                    cur.close()        
+
+    # def get_r_tree(self,prj_ids,phase,hierarchy,wp):
+    #     connection = self.conn
+    #     prj_id_list_str = ', '.join(f"'{item}'" for item in prj_ids)
+    #     phase_list_str = ', '.join(f"'{item}'" for item in phase)
+    #     hierarchy_list_str = ', '.join(f"'{item}'" for item in hierarchy)
+    #     wp_list_str = ', '.join(f"'{item}'" for item in wp)
+
+    #     query = f"""
+    #         WITH target_hierarchies AS (
+    #             SELECT hierarchy_id
+    #             FROM rfl_view
+    #             WHERE pj_id IN ({prj_id_list_str}) AND phase IN ({phase_list_str}) AND r_wp IN ({wp_list_str})
+    #             GROUP BY hierarchy_id, hierarchy
+    #         )
+    #         SELECT *
+    #         FROM rfl_view
+    #         WHERE pj_id IN ({prj_id_list_str})
+    #         AND phase IN ({phase_list_str})
+    #         AND r_wp IN ({wp_list_str})
+    #         AND hierarchy_id IN (SELECT hierarchy_id FROM target_hierarchies)
+    #         ORDER BY hierarchy_id, r_wp_ld, index
+    #     """
+    #     df = pd.read_sql_query(query, connection)
+    #     return df
+
+        
+    def get_r_tree(self, prj_ids, phase, hierarchy, wp, r_or_all_r_flag=''):
+        connection = self.conn
+
+        if connection is None:
+            raise ValueError("Database connection (`self.conn`) is not initialized.")
+
+        prj_id_list_str = ', '.join(f"'{item}'" for item in prj_ids)
+        phase_list_str = ', '.join(f"'{item}'" for item in phase)
+        hierarchy_list_str = ', '.join(f"'{item}'" for item in hierarchy)
+
+        # Handle wp_list based on r_or_all_r_flag
+        if r_or_all_r_flag == 'ALL_R':
+            wp_query = f"""
+                SELECT DISTINCT r_wp
+                FROM public.rfl_view
+                WHERE pj_id IN ({prj_id_list_str}) AND phase IN ({phase_list_str})
+            """
+            wp_df = pd.read_sql(wp_query, connection)
+            wp_values = wp_df['r_wp'].tolist()
+        else:
+            wp_values = wp
+
+        # Build wp list string
+        wp_list_str = ', '.join(f"'{item}'" for item in wp_values)
+
+        # Main query using expanded wp_list_str
+        query = f"""
+            WITH target_hierarchies AS (
+                SELECT hierarchy_id
+                FROM rfl_view
+                WHERE pj_id IN ({prj_id_list_str})
+                AND phase IN ({phase_list_str})
+                AND r_wp IN ({wp_list_str})
+                GROUP BY hierarchy_id, hierarchy
+            )
+            SELECT *
+            FROM rfl_view
+            WHERE pj_id IN ({prj_id_list_str})
+            AND phase IN ({phase_list_str})
+            AND r_wp IN ({wp_list_str})
+            AND hierarchy_id IN (SELECT hierarchy_id FROM target_hierarchies)
+            ORDER BY hierarchy_id, r_wp_ld, index
+        """
+        df = pd.read_sql(query, connection)
+        return df
 
 
-    
-    # def fetch_new_prj_infos(self, new_prjs, new_destinations, new_drive_systems, new_lots):
+
+    #with error when there data are already exist in the table
+    # def insert_new_se_project(self, prj_info_list, new_prjs,new_destinations,new_drive_systems,new_lots):
+    #     """
+    #     Clone project_parameter rows for new project_ids based on existing (project_id, phase_id, variation_id).
+
+    #     :param prj_info_list: Pandas DataFrame or list of dicts with keys: project_id, phase_id, variation_id
+    #     :param new_prj_ids: List of new project IDs to clone data into
+    #     :return: True on success, False if no data to process
+    #     """
     #     cur = None
     #     try:
     #         cur = self.conn.cursor()
+
+    #         #Fetch new project IDs from the DB
     #         fetch_new_prj_ids_query = """
     #             SELECT pj.id AS new_prj_id
     #             FROM project_info AS pj
@@ -4502,14 +4784,967 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
     #             AND l.lot = ANY(%s)
     #             ORDER BY pj.id;
     #         """
-    #         new_prj_infos = cur.execute(fetch_new_prj_ids_query, (new_prjs, new_destinations, new_drive_systems, new_lots))
+
+    #         cur.execute(
+    #             fetch_new_prj_ids_query,
+    #             (new_prjs, new_destinations, new_drive_systems, new_lots)
+    #         )
+
+    #         new_prj_id_rows = cur.fetchall()
+    #         new_prj_ids = [row[0] for row in new_prj_id_rows]
+
+    #         # Convert DataFrame to list of dicts if needed
+    #         if hasattr(prj_info_list, "to_dict"):
+    #             prj_info_list = prj_info_list.to_dict(orient='records')
+
+    #         print('prj_info_list: ', prj_info_list)
+
+    #         if not prj_info_list or not new_prj_ids:
+    #             print("No data to process.")
+    #             return False
+
+    #         # Build conditions tuple list with explicit int casting for project_id, phase_id, variation_id
+    #         conditions = [
+    #             (
+    #                 int(info['project_id']),
+    #                 int(info['phase_id']),
+    #                 int(info['variation_id'])
+    #             )
+    #             for info in prj_info_list
+    #         ]
+
+    #         # Use mogrify to safely format each tuple for multi-column IN clause
+    #         tuples_placeholder = ', '.join(
+    #             cur.mogrify("(%s, %s, %s)", cond).decode('utf-8')
+    #             for cond in conditions
+    #         )
+
+    #         select_query = f"""
+    #             SELECT
+    #                 project_id,
+    #                 se_parameter_id,
+    #                 phase_id,
+    #                 variation_id,
+    #                 arasid,
+    #                 value,
+    #                 employee_number,
+    #                 z_note,
+    #                 surid,
+    #                 z_prj_number
+    #             FROM project_parameter
+    #             WHERE (project_id, phase_id, variation_id) IN ({tuples_placeholder})
+    #             ORDER BY arasid;
+    #         """
+
+    #         cur.execute(select_query)
+    #         existing_rows = cur.fetchall()
+
+    #         if not existing_rows:
+    #             print("No matching rows found to clone.")
+    #             return False
+
+    #         #Get the current max surid
+    #         cur.execute("SELECT MAX(surid) FROM project_parameter;")
+    #         max_surid_row = cur.fetchone()
+    #         max_surid = max_surid_row[0] if max_surid_row[0] is not None else 0
+
+    #         # Prepare bulk insert data
+    #         insert_se_parameter_data = []
+    #         insert_detail_data = []
+    #         # for new_project_id in new_prj_ids:
+    #         for idx, new_project_id in enumerate(new_prj_ids):
+    #             z_prj_number = f"SElist_{new_prjs[idx]}_{new_destinations[idx]}_{new_drive_systems[idx]}"      
+    #             for row in existing_rows:
+    #                 (
+    #                     _old_project_id,        
+    #                     se_param_id,
+    #                     phase_id,
+    #                     variation_id,
+    #                     _old_arasid,
+    #                     value,
+    #                     employee_number,
+    #                     z_note,
+    #                     _old_surid,
+    #                     _old_z_prj_number
+    #                 ) = row
+    #                 max_surid += 1  # increment for each inserted row
+    #                 new_arasid = f"add_test_{max_surid}"  # dynamically generated
+
+    #                 # Add to project_parameter insert list
+    #                 insert_se_parameter_data.append((
+    #                     int(new_project_id),        # project_id as int
+    #                     int(se_param_id),           # se_parameter_id as int
+    #                     int(phase_id),              # phase_id as int
+    #                     int(variation_id),          # variation_id as int
+    #                     new_arasid,                  
+    #                     value,                     
+    #                     employee_number,            # updated arasid
+    #                     z_note,                    
+    #                     max_surid,                # new_surid
+    #                     z_prj_number               
+    #                 ))
+
+    #                 # Add to detail_data insert list
+    #                 insert_detail_data.append((
+    #                     new_arasid,             # z_paravalueid
+    #                     employee_number,        # employee_number
+    #                     datetime.datetime.now(),         # update_day (current timestamp)
+    #                     0,                      # approval_status
+    #                     None,                   # user_memo
+    #                     None                    # value
+    #                 ))
+    #         insert_pj_parameter_query = """
+    #             INSERT INTO project_parameter (
+    #                 project_id, se_parameter_id, phase_id, variation_id,
+    #                 arasid, value, employee_number, z_note, surid, z_prj_number
+    #             ) VALUES %s;
+    #         """
+
+    #         insert_detail_data_query = """
+    #             INSERT INTO detail_data (
+    #                 z_paravalueid, employee_number, update_day,
+    #                 approval_status, user_memo, value
+    #             ) VALUES %s;
+    #         """
+
+    #         execute_values(cur, insert_pj_parameter_query, insert_se_parameter_data)
+    #         execute_values(cur, insert_detail_data_query, insert_detail_data)
+
     #         self.conn.commit()
-    #         return new_prj_infos
+    #         return True
+
     #     except psycopg2.Error as e:
     #         if self.conn:
     #             self.conn.rollback()
     #         print(f"Database error: {e}")
     #         raise e
+
+    #     finally:
+    #         if cur:
+    #             cur.close()
+
+    def fetch_new_prj_infos(self, new_prjs, new_destinations, new_drive_systems, new_lots):
+        cur = None
+        try:
+            cur = self.conn.cursor()
+            fetch_new_prj_ids_query = """
+                SELECT pj.id AS new_prj_id
+                FROM project_info AS pj
+                INNER JOIN lot AS l ON l.id = pj.lot_id
+                INNER JOIN setup AS stp ON stp.id = pj.setup_id
+                INNER JOIN architecture AS archi ON archi.id = stp.architecture_id
+                INNER JOIN destination AS dest ON dest.id = stp.destination_id
+                INNER JOIN drivetrain AS dt ON dt.id = stp.drivetrain_id
+                WHERE pj.project_code = ANY(%s)
+                AND dest.destination = ANY(%s)
+                AND dt.drivetrain = ANY(%s)
+                AND l.lot = ANY(%s)
+                ORDER BY pj.id;
+            """
+            new_prj_infos = cur.execute(fetch_new_prj_ids_query, (new_prjs, new_destinations, new_drive_systems, new_lots))
+            self.conn.commit()
+            return new_prj_infos
+        except psycopg2.Error as e:
+            if self.conn:
+                self.conn.rollback()
+            print(f"Database error: {e}")
+            raise e
+        finally:
+            if cur:
+                cur.close()
+
+    # def insert_new_rlist_and_rfl_list(self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots):
+    #     import datetime
+    #     from psycopg2.extras import execute_values
+
+    #     cur = None
+    #     try:
+    #         cur = self.conn.cursor()
+
+    #         # Step 1: Fetch new project and setup IDs
+    #         fetch_new_prj_ids_query = """
+    #             SELECT pj.id AS new_prj_id, pj.setup_id AS new_setup_id
+    #             FROM project_info AS pj
+    #             INNER JOIN lot AS l ON l.id = pj.lot_id
+    #             INNER JOIN setup AS stp ON stp.id = pj.setup_id
+    #             INNER JOIN architecture AS archi ON archi.id = stp.architecture_id
+    #             INNER JOIN destination AS dest ON dest.id = stp.destination_id
+    #             INNER JOIN drivetrain AS dt ON dt.id = stp.drivetrain_id
+    #             WHERE pj.project_code = ANY(%s)
+    #             AND dest.destination = ANY(%s)
+    #             AND dt.drivetrain = ANY(%s)
+    #             AND l.lot = ANY(%s)
+    #             ORDER BY pj.id;
+    #         """
+    #         cur.execute(fetch_new_prj_ids_query, (new_prjs, new_destinations, new_drive_systems, new_lots))
+    #         new_prj_setup_rows = cur.fetchall()
+
+    #         if not new_prj_setup_rows:
+    #             print("No new projects found matching the criteria.")
+    #             return False
+
+    #         new_prj_ids = [row[0] for row in new_prj_setup_rows]
+
+    #         # Step 2: Ensure prj_info_list is a list of dicts
+    #         if hasattr(prj_info_list, "to_dict"):
+    #             prj_info_list = prj_info_list.to_dict(orient='records')
+
+    #         if not prj_info_list:
+    #             print("No data to process.")
+    #             return False
+
+    #         # Step 3: Build conditions for fetching existing r_parameter rows
+    #         conditions = [
+    #             (int(info['project_id']), int(info['phase_id']), int(info['variation_id']))
+    #             for info in prj_info_list
+    #         ]
+    #         tuples_placeholder = ', '.join(
+    #             cur.mogrify("(%s, %s, %s)", cond).decode('utf-8') for cond in conditions
+    #         )
+
+    #         select_query = f"""
+    #             SELECT project_id, r_parameter_id, phase_id, spec_to_study, status, target, date, note,
+    #                 priority, employee_number, detail_and_output, tool, responsible, period,
+    #                 variation_id, flag_primary, design, judge, auto_judge_id,
+    #                 manager_approval, manager_approval_comment, judge_evidence, adjusted_target
+    #             FROM project_r_parameter
+    #             WHERE (project_id, phase_id, variation_id) IN ({tuples_placeholder})
+    #             ORDER BY project_id, phase_id, variation_id, r_parameter_id;
+    #         """
+    #         cur.execute(select_query)
+    #         existing_rows = cur.fetchall()
+
+    #         if not existing_rows:
+    #             print("No matching rows found in project_r_parameter to clone.")
+    #             return False
+
+    #         # Step 4: Build new rows with updated project_id
+    #         insert_r_param_data = []
+
+    #         for idx, new_project_id in enumerate(new_prj_ids):
+    #             for row in existing_rows:
+    #                 (
+    #                     _old_project_id,
+    #                     r_parameter_id,
+    #                     phase_id,
+    #                     spec_to_study,
+    #                     status,
+    #                     target,
+    #                     date,
+    #                     note,
+    #                     priority,
+    #                     employee_number,
+    #                     detail_and_output,
+    #                     tool,
+    #                     responsible,
+    #                     period,
+    #                     variation_id,
+    #                     flag_primary,
+    #                     design,
+    #                     judge,
+    #                     auto_judge_id,
+    #                     manager_approval,
+    #                     manager_approval_comment,
+    #                     judge_evidence,
+    #                     adjusted_target
+    #                 ) = row
+
+    #                 insert_r_param_data.append((
+    #                     new_project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+    #                     date, note, priority, employee_number, detail_and_output, tool,
+    #                     responsible, period, variation_id, flag_primary, design, judge,
+    #                     auto_judge_id, manager_approval, manager_approval_comment,
+    #                     judge_evidence, adjusted_target
+    #                 ))
+
+    #         # Step 5: Run bulk insert
+    #         if insert_r_param_data:
+    #             execute_values(cur, """
+    #                 INSERT INTO project_r_parameter (
+    #                     project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+    #                     date, note, priority, employee_number, detail_and_output, tool,
+    #                     responsible, period, variation_id, flag_primary, design, judge,
+    #                     auto_judge_id, manager_approval, manager_approval_comment,
+    #                     judge_evidence, adjusted_target
+    #                 ) VALUES %s;
+    #             """, insert_r_param_data)
+
+    #         self.conn.commit()
+    #         return True
+
+    #     except psycopg2.Error as e:
+    #         if self.conn:
+    #             self.conn.rollback()
+    #         print(f"Database error: {e}")
+    #         raise e
+
+    #     finally:
+    #         if cur:
+    #             cur.close()
+
+    # def insert_new_rlist_and_rfl_list(self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots):
+
+    #     cur = None
+    #     try:
+    #         cur = self.conn.cursor()
+
+    #         # Step 1: Fetch new project and setup IDs from DB
+    #         fetch_new_prj_ids_query = """
+    #             SELECT pj.id AS new_prj_id, pj.setup_id AS new_setup_id
+    #             FROM project_info AS pj
+    #             INNER JOIN lot AS l ON l.id = pj.lot_id
+    #             INNER JOIN setup AS stp ON stp.id = pj.setup_id
+    #             INNER JOIN architecture AS archi ON archi.id = stp.architecture_id
+    #             INNER JOIN destination AS dest ON dest.id = stp.destination_id
+    #             INNER JOIN drivetrain AS dt ON dt.id = stp.drivetrain_id
+    #             WHERE pj.project_code = ANY(%s)
+    #             AND dest.destination = ANY(%s)
+    #             AND dt.drivetrain = ANY(%s)
+    #             AND l.lot = ANY(%s)
+    #             ORDER BY pj.id;
+    #         """
+    #         cur.execute(fetch_new_prj_ids_query, (new_prjs, new_destinations, new_drive_systems, new_lots))
+    #         new_prj_setup_rows = cur.fetchall()  # List of (new_project_id, new_setup_id)
+
+    #         if not new_prj_setup_rows:
+    #             print("No new projects found matching the criteria.")
+    #             return False
+
+    #         new_prj_ids = [row[0] for row in new_prj_setup_rows]
+
+    #         # Step 2: Convert prj_info_list to list of dicts (if DataFrame)
+    #         if hasattr(prj_info_list, "to_dict"):
+    #             prj_info_list = prj_info_list.to_dict(orient='records')
+
+    #         if not prj_info_list:
+    #             print("No data to process.")
+    #             return False
+
+    #         # Step 3: Build conditions to fetch existing project_r_parameter rows
+    #         conditions = [
+    #             (int(info['project_id']), int(info['phase_id']), int(info['variation_id']))
+    #             for info in prj_info_list
+    #         ]
+    #         tuples_placeholder = ', '.join(
+    #             cur.mogrify("(%s, %s, %s)", cond).decode('utf-8') for cond in conditions
+    #         )
+
+    #         select_r_param_query = f"""
+    #             SELECT project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+    #                 date, note, priority, employee_number, detail_and_output, tool,
+    #                 responsible, period, variation_id, flag_primary, design, judge,
+    #                 auto_judge_id, manager_approval, manager_approval_comment,
+    #                 judge_evidence, adjusted_target
+    #             FROM project_r_parameter
+    #             WHERE (project_id, phase_id, variation_id) IN ({tuples_placeholder})
+    #             ORDER BY project_id, phase_id, variation_id, r_parameter_id;
+    #         """
+    #         cur.execute(select_r_param_query)
+    #         existing_rows = cur.fetchall()
+
+    #         if not existing_rows:
+    #             print("No matching rows found in project_r_parameter to clone.")
+    #             return False
+
+    #         # Step 4: Clone project_r_parameter rows for each new project
+    #         insert_r_param_data = []
+
+    #         for idx, new_project_id in enumerate(new_prj_ids):
+    #             for row in existing_rows:
+    #                 (
+    #                     _old_project_id,
+    #                     r_parameter_id,
+    #                     phase_id,
+    #                     spec_to_study,
+    #                     status,
+    #                     target,
+    #                     date,
+    #                     note,
+    #                     priority,
+    #                     employee_number,
+    #                     detail_and_output,
+    #                     tool,
+    #                     responsible,
+    #                     period,
+    #                     variation_id,
+    #                     flag_primary,
+    #                     design,
+    #                     judge,
+    #                     auto_judge_id,
+    #                     manager_approval,
+    #                     manager_approval_comment,
+    #                     judge_evidence,
+    #                     adjusted_target
+    #                 ) = row
+
+    #                 insert_r_param_data.append((
+    #                     new_project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+    #                     date, note, priority, employee_number, detail_and_output, tool,
+    #                     responsible, period, variation_id, flag_primary, design, judge,
+    #                     auto_judge_id, manager_approval, manager_approval_comment,
+    #                     judge_evidence, adjusted_target
+    #                 ))
+
+    #         # Step 5: Bulk insert into project_r_parameter
+    #         if insert_r_param_data:
+    #             execute_values(cur, """
+    #                 INSERT INTO project_r_parameter (
+    #                     project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+    #                     date, note, priority, employee_number, detail_and_output, tool,
+    #                     responsible, period, variation_id, flag_primary, design, judge,
+    #                     auto_judge_id, manager_approval, manager_approval_comment,
+    #                     judge_evidence, adjusted_target
+    #                 ) VALUES %s;
+    #             """, insert_r_param_data)
+
+    #         # Step 6: Clone setup_r_relation rows
+
+    #         # 6.1: Get r_parameter_ids from existing rows
+    #         used_r_param_ids = list({row[1] for row in existing_rows})  # row[1] = r_parameter_id
+
+    #         # 6.2: Get the original setup_ids from prj_info_list
+    #         old_setup_ids = list({int(info['setup_id']) for info in prj_info_list})
+
+    #         # 6.3: Get max id from setup_r_relation
+    #         cur.execute("SELECT MAX(id) FROM setup_r_relation;")
+    #         max_id_row = cur.fetchone()
+    #         next_id = (max_id_row[0] or 0) + 1
+
+    #         # 6.4: Fetch old relationship rows
+    #         placeholders = ','.join(['%s'] * len(used_r_param_ids))
+    #         fetch_setup_rel_query = f"""
+    #             SELECT setup_id, r_parameter_id, usecase_id
+    #             FROM setup_r_relation
+    #             WHERE setup_id = ANY(%s)
+    #             AND r_parameter_id IN ({placeholders});
+    #         """
+    #         cur.execute(fetch_setup_rel_query, (old_setup_ids, *used_r_param_ids))
+    #         setup_rel_rows = cur.fetchall()
+
+    #         # 6.5: Prepare cloned relationship rows with new setup_id and new id
+    #         insert_setup_rel_data = []
+
+    #         for (_new_prj_id, new_setup_id) in new_prj_setup_rows:
+    #             for row in setup_rel_rows:
+    #                 _old_setup_id, r_param_id, usecase_id = row
+    #                 insert_setup_rel_data.append((
+    #                     next_id,
+    #                     new_setup_id,
+    #                     r_param_id,
+    #                     usecase_id
+    #                 ))
+    #                 next_id += 1
+
+    #         # 6.6: Bulk insert into setup_r_relation
+    #         if insert_setup_rel_data:
+    #             execute_values(cur, """
+    #                 INSERT INTO setup_r_relation (
+    #                     id, setup_id, r_parameter_id, usecase_id
+    #                 ) VALUES %s;
+    #             """, insert_setup_rel_data)
+
+    #         # Final: Commit all changes
+    #         self.conn.commit()
+    #         print("Insert completed successfully.")
+    #         return True
+
+    #     except psycopg2.Error as e:
+    #         if self.conn:
+    #             self.conn.rollback()
+    #         print(f"Database error: {e}")
+    #         raise e
+
+    #     finally:
+    #         if cur:
+    #             cur.close()
+
+
+    # #se works!
+    # def insert_new_se_project(self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots):
+    #     cur = None
+    #     try:
+    #         cur = self.conn.cursor()
+
+    #         # Step 1: Fetch new project IDs from the DB
+    #         fetch_new_prj_ids_query = """
+    #             SELECT pj.id AS new_prj_id
+    #             FROM project_info AS pj
+    #             INNER JOIN lot AS l ON l.id = pj.lot_id
+    #             INNER JOIN setup AS stp ON stp.id = pj.setup_id
+    #             INNER JOIN architecture AS archi ON archi.id = stp.architecture_id
+    #             INNER JOIN destination AS dest ON dest.id = stp.destination_id
+    #             INNER JOIN drivetrain AS dt ON dt.id = stp.drivetrain_id
+    #             WHERE pj.project_code = ANY(%s)
+    #             AND dest.destination = ANY(%s)
+    #             AND dt.drivetrain = ANY(%s)
+    #             AND l.lot = ANY(%s)
+    #             ORDER BY pj.id;
+    #         """
+    #         cur.execute(fetch_new_prj_ids_query, (new_prjs, new_destinations, new_drive_systems, new_lots))
+
+    #         new_prj_ids = [row[0] for row in cur.fetchall()]
+    #         # new_prj_infos = self.fetch_new_prj_infos(new_prjs, new_destinations, new_drive_systems, new_lots)
+    #         # new_prj_ids = [row[0] for row in new_prj_infos]
+    #         # Step 2: Convert DataFrame to list of dicts if needed
+    #         if hasattr(prj_info_list, "to_dict"):
+    #             prj_info_list = prj_info_list.to_dict(orient='records')
+
+    #         if not prj_info_list or not new_prj_ids:
+    #             print("No data to process.")
+    #             return False
+
+    #         # Step 3: Build conditions for fetching existing rows
+    #         conditions = [
+    #             (int(info['project_id']), int(info['phase_id']), int(info['variation_id']))
+    #             for info in prj_info_list
+    #         ]
+    #         tuples_placeholder = ', '.join(
+    #             cur.mogrify("(%s, %s, %s)", cond).decode('utf-8') for cond in conditions
+    #         )
+
+    #         select_query = f"""
+    #             SELECT project_id, se_parameter_id, phase_id, variation_id,
+    #                 arasid, value, employee_number, z_note, surid, z_prj_number
+    #             FROM project_parameter
+    #             WHERE (project_id, phase_id, variation_id) IN ({tuples_placeholder})
+    #             ORDER BY arasid;
+    #         """
+    #         cur.execute(select_query)
+    #         existing_rows = cur.fetchall()
+
+    #         if not existing_rows:
+    #             print("No matching rows found to clone.")
+    #             return False
+
+    #         # Step 4: Get current max surid
+    #         cur.execute("SELECT MAX(surid) FROM project_parameter;")
+    #         max_surid_row = cur.fetchone()
+    #         max_surid = max_surid_row[0] if max_surid_row[0] is not None else 0
+
+    #         # Build unique keys to check in bulk
+    #         keys_to_check = list({
+    #             (int(new_project_id), int(row[2]), int(row[3]))  # (project_id, phase_id, variation_id)
+    #             for idx, new_project_id in enumerate(new_prj_ids)
+    #             for row in existing_rows
+    #         })
+
+    #         print('keys_to_check: ', keys_to_check)
+
+    #         # Prepare IN clause safely using mogrify
+    #         where_clause = ', '.join(
+    #             cur.mogrify("(%s, %s, %s)", key).decode("utf-8") for key in keys_to_check
+    #         )
+
+    #         # Final query
+    #         check_existing_query = f"""
+    #             SELECT project_id, se_parameter_id, phase_id, variation_id
+    #             FROM project_parameter
+    #             WHERE (project_id, phase_id, variation_id) IN ({where_clause});
+    #         """
+
+    #         # Execute the query
+    #         cur.execute(check_existing_query)
+    #         existing_keys = set(cur.fetchall())
+
+    #         # # Step 5: Get all existing primary keys to check for conflict
+    #         # cur.execute("SELECT project_id, se_parameter_id, phase_id, variation_id FROM project_parameter;")
+    #         # existing_keys = set(cur.fetchall())
+
+    #         print('existing_keys: ', len(existing_keys))
+
+    #         # Step 6: Prepare insert lists
+    #         insert_se_parameter_data = []
+    #         insert_detail_data = []
+
+    #         for idx, new_project_id in enumerate(new_prj_ids):
+    #             z_prj_number = f"SElist_{new_prjs[idx]}_{new_destinations[idx]}_{new_drive_systems[idx]}"
+    #             for row in existing_rows:
+    #                 (
+    #                     _old_project_id,
+    #                     se_param_id,
+    #                     phase_id,
+    #                     variation_id,
+    #                     _old_arasid,
+    #                     value,
+    #                     employee_number,
+    #                     z_note,
+    #                     _old_surid,
+    #                     _old_z_prj_number
+    #                 ) = row
+
+    #                 # Check for conflict using new project ID + param IDs
+    #                 key = (int(new_project_id), int(se_param_id), int(phase_id), int(variation_id))
+    #                 if key in existing_keys:
+    #                     continue  # Skip if already exists
+
+    #                 max_surid += 1
+    #                 new_arasid = f"add_test_{max_surid}"
+
+    #                 insert_se_parameter_data.append((
+    #                     key[0], key[1], key[2], key[3],
+    #                     new_arasid,
+    #                     value,
+    #                     employee_number,
+    #                     z_note,
+    #                     max_surid,
+    #                     z_prj_number
+    #                 ))
+
+    #                 insert_detail_data.append((
+    #                     new_arasid,
+    #                     employee_number,
+    #                     datetime.datetime.now(),
+    #                     0,
+    #                     None,
+    #                     None
+    #                 ))
+
+    #         # Step 7: Run bulk inserts
+    #         if insert_se_parameter_data:
+    #             execute_values(cur, """
+    #                 INSERT INTO project_parameter (
+    #                     project_id, se_parameter_id, phase_id, variation_id,
+    #                     arasid, value, employee_number, z_note, surid, z_prj_number
+    #                 ) VALUES %s;
+    #             """, insert_se_parameter_data)
+
+    #         if insert_detail_data:
+    #             execute_values(cur, """
+    #                 INSERT INTO detail_data (
+    #                     z_paravalueid, employee_number, update_day,
+    #                     approval_status, user_memo, value
+    #                 ) VALUES %s;
+    #             """, insert_detail_data)
+
+    #         self.conn.commit()
+    #         return True
+
+    #     except psycopg2.Error as e:
+    #         if self.conn:
+    #             self.conn.rollback()
+    #         print(f"Database error: {e}")
+    #         raise e
+
+    #     finally:
+    #         if cur:
+    #             cur.close()
+
+
+    # #rlist works!
+    # def insert_new_rlist_and_rfl_list(self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots):
+
+    #     cur = None
+    #     try:
+    #         cur = self.conn.cursor()
+
+    #         # Step 1: Fetch new project and setup IDs from DB
+    #         fetch_new_prj_ids_query = """
+    #             SELECT pj.id AS new_prj_id, pj.setup_id AS new_setup_id
+    #             FROM project_info AS pj
+    #             INNER JOIN lot AS l ON l.id = pj.lot_id
+    #             INNER JOIN setup AS stp ON stp.id = pj.setup_id
+    #             INNER JOIN architecture AS archi ON archi.id = stp.architecture_id
+    #             INNER JOIN destination AS dest ON dest.id = stp.destination_id
+    #             INNER JOIN drivetrain AS dt ON dt.id = stp.drivetrain_id
+    #             WHERE pj.project_code = ANY(%s)
+    #             AND dest.destination = ANY(%s)
+    #             AND dt.drivetrain = ANY(%s)
+    #             AND l.lot = ANY(%s)
+    #             ORDER BY pj.id;
+    #         """
+    #         cur.execute(fetch_new_prj_ids_query, (new_prjs, new_destinations, new_drive_systems, new_lots))
+    #         new_prj_setup_rows = cur.fetchall()  # List of (new_project_id, new_setup_id)
+
+    #         if not new_prj_setup_rows:
+    #             print("No new projects found matching the criteria.")
+    #             return False
+
+    #         new_prj_ids = [row[0] for row in new_prj_setup_rows]
+
+    #         # Step 2: Convert prj_info_list to list of dicts (if DataFrame)
+    #         if hasattr(prj_info_list, "to_dict"):
+    #             prj_info_list = prj_info_list.to_dict(orient='records')
+
+    #         if not prj_info_list:
+    #             print("No data to process.")
+    #             return False
+
+    #         # Step 3: Build conditions to fetch existing project_r_parameter rows
+    #         conditions = [
+    #             (int(info['project_id']), int(info['phase_id']), int(info['variation_id']))
+    #             for info in prj_info_list
+    #         ]
+    #         tuples_placeholder = ', '.join(
+    #             cur.mogrify("(%s, %s, %s)", cond).decode('utf-8') for cond in conditions
+    #         )
+
+    #         select_r_param_query = f"""
+    #             SELECT project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+    #                 date, note, priority, employee_number, detail_and_output, tool,
+    #                 responsible, period, variation_id, flag_primary, design, judge,
+    #                 auto_judge_id, manager_approval, manager_approval_comment,
+    #                 judge_evidence, adjusted_target
+    #             FROM project_r_parameter
+    #             WHERE (project_id, phase_id, variation_id) IN ({tuples_placeholder})
+    #             ORDER BY project_id, phase_id, variation_id, r_parameter_id;
+    #         """
+    #         cur.execute(select_r_param_query)
+    #         existing_rows = cur.fetchall()
+
+    #         if not existing_rows:
+    #             print("No matching rows found in project_r_parameter to clone.")
+    #             return False
+
+    #         # Step 4: Get existing project_r_parameter keys to prevent duplicates
+    #         cur.execute("""
+    #             SELECT project_id, r_parameter_id, phase_id, variation_id
+    #             FROM project_r_parameter;
+    #         """)
+    #         existing_r_param_keys = set(cur.fetchall())
+
+    #         # Step 5: Clone project_r_parameter rows for each new project
+    #         insert_r_param_data = []
+
+    #         for idx, new_project_id in enumerate(new_prj_ids):
+    #             for row in existing_rows:
+    #                 (
+    #                     _old_project_id,
+    #                     r_parameter_id,
+    #                     phase_id,
+    #                     spec_to_study,
+    #                     status,
+    #                     target,
+    #                     date,
+    #                     note,
+    #                     priority,
+    #                     employee_number,
+    #                     detail_and_output,
+    #                     tool,
+    #                     responsible,
+    #                     period,
+    #                     variation_id,
+    #                     flag_primary,
+    #                     design,
+    #                     judge,
+    #                     auto_judge_id,
+    #                     manager_approval,
+    #                     manager_approval_comment,
+    #                     judge_evidence,
+    #                     adjusted_target
+    #                 ) = row
+
+    #                 key = (new_project_id, r_parameter_id, phase_id, variation_id)
+    #                 if key in existing_r_param_keys:
+    #                     continue  # skip duplicate
+    #                 existing_r_param_keys.add(key)
+
+    #                 insert_r_param_data.append((
+    #                     new_project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+    #                     date, note, priority, employee_number, detail_and_output, tool,
+    #                     responsible, period, variation_id, flag_primary, design, judge,
+    #                     auto_judge_id, manager_approval, manager_approval_comment,
+    #                     judge_evidence, adjusted_target
+    #                 ))
+
+    #         # Step 6: Bulk insert into project_r_parameter
+    #         if insert_r_param_data:
+    #             execute_values(cur, """
+    #                 INSERT INTO project_r_parameter (
+    #                     project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+    #                     date, note, priority, employee_number, detail_and_output, tool,
+    #                     responsible, period, variation_id, flag_primary, design, judge,
+    #                     auto_judge_id, manager_approval, manager_approval_comment,
+    #                     judge_evidence, adjusted_target
+    #                 ) VALUES %s;
+    #             """, insert_r_param_data)
+
+    #         # Step 7: Clone setup_r_relation rows (with duplicate prevention)
+
+    #         # 7.1: Get used r_parameter_ids from existing rows
+    #         used_r_param_ids = list({row[1] for row in existing_rows})
+
+    #         # 7.2: Get original setup_ids from prj_info_list
+    #         old_setup_ids = list({int(info['setup_id']) for info in prj_info_list})
+
+    #         # 7.3: Get max id from setup_r_relation
+    #         cur.execute("SELECT MAX(id) FROM setup_r_relation;")
+    #         max_id_row = cur.fetchone()
+    #         next_id = (max_id_row[0] or 0) + 1
+
+    #         # 7.4: Fetch old relationship rows to clone
+    #         placeholders = ','.join(['%s'] * len(used_r_param_ids))
+    #         fetch_setup_rel_query = f"""
+    #             SELECT setup_id, r_parameter_id, usecase_id
+    #             FROM setup_r_relation
+    #             WHERE setup_id = ANY(%s)
+    #             AND r_parameter_id IN ({placeholders});
+    #         """
+    #         cur.execute(fetch_setup_rel_query, (old_setup_ids, *used_r_param_ids))
+    #         setup_rel_rows = cur.fetchall()
+
+    #         if not setup_rel_rows:
+    #             print("No setup_r_relation rows to clone.")
+    #         else:
+    #             print(f"Preparing to clone {len(setup_rel_rows)} setup_r_relation rows...")
+
+    #         # 7.5: Fetch existing (setup_id, r_parameter_id, usecase_id) keys
+    #         cur.execute("SELECT setup_id, r_parameter_id, usecase_id FROM setup_r_relation;")
+    #         existing_setup_keys = set(cur.fetchall())
+
+    #         # 7.6: Prepare insert rows (skip existing keys)
+    #         insert_setup_rel_data = []
+
+    #         for (_new_prj_id, new_setup_id) in new_prj_setup_rows:
+    #             for row in setup_rel_rows:
+    #                 _old_setup_id, r_param_id, usecase_id = row
+    #                 key = (new_setup_id, r_param_id, usecase_id)
+    #                 if key in existing_setup_keys:
+    #                     continue  # skip duplicate
+    #                 existing_setup_keys.add(key)
+
+    #                 insert_setup_rel_data.append((
+    #                     next_id,
+    #                     new_setup_id,
+    #                     r_param_id,
+    #                     usecase_id
+    #                 ))
+    #                 next_id += 1
+
+    #         # 7.7: Bulk insert into setup_r_relation
+    #         if insert_setup_rel_data:
+    #             execute_values(cur, """
+    #                 INSERT INTO setup_r_relation (
+    #                     id, setup_id, r_parameter_id, usecase_id
+    #                 ) VALUES %s;
+    #             """, insert_setup_rel_data)
+
+    #         # Final Step: Commit transaction
+    #         self.conn.commit()
+    #         print("Insert completed successfully.")
+    #         return True
+
+    #     except psycopg2.Error as e:
+    #         if self.conn:
+    #             self.conn.rollback()
+    #         print(f"Database error: {e}")
+    #         raise e
+
+    #     finally:
+    #         if cur:
+    #             cur.close()
+
+
+    # #rfl works!
+    # def insert_new_rfl_project(self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots):
+    #     cur = None
+    #     try:
+    #         cur = self.conn.cursor()
+
+    #         # Step 1: Fetch new project IDs matching criteria
+    #         fetch_new_prj_ids_query = """
+    #             SELECT pj.id AS new_prj_id
+    #             FROM project_info AS pj
+    #             INNER JOIN lot AS l ON l.id = pj.lot_id
+    #             INNER JOIN setup AS stp ON stp.id = pj.setup_id
+    #             INNER JOIN architecture AS archi ON archi.id = stp.architecture_id
+    #             INNER JOIN destination AS dest ON dest.id = stp.destination_id
+    #             INNER JOIN drivetrain AS dt ON dt.id = stp.drivetrain_id
+    #             WHERE pj.project_code = ANY(%s)
+    #             AND dest.destination = ANY(%s)
+    #             AND dt.drivetrain = ANY(%s)
+    #             AND l.lot = ANY(%s)
+    #             ORDER BY pj.id;
+    #         """
+    #         cur.execute(fetch_new_prj_ids_query, (new_prjs, new_destinations, new_drive_systems, new_lots))
+    #         new_prj_ids = [row[0] for row in cur.fetchall()]
+
+    #         if not new_prj_ids:
+    #             print("No new projects found matching the criteria.")
+    #             return False
+
+    #         # Step 2: Convert prj_info_list to list of dicts if needed
+    #         if hasattr(prj_info_list, "to_dict"):
+    #             prj_info_list = prj_info_list.to_dict(orient='records')
+
+    #         if not prj_info_list:
+    #             print("No data to process.")
+    #             return False
+
+    #         # Step 3: Fetch existing prj_rfl rows for each (r_pj_id, phase_id) in prj_info_list
+    #         # Build conditions and placeholders
+    #         conditions = [
+    #             (int(info['r_pj_id']), int(info['phase_id']))
+    #             for info in prj_info_list
+    #         ]
+    #         tuples_placeholder = ', '.join(
+    #             cur.mogrify("(%s, %s)", cond).decode('utf-8') for cond in conditions
+    #         )
+
+    #         select_rfl_query = f"""
+    #             SELECT project_info_id, rfl_id, phase_id, requirement, function, logic,
+    #                 note, flag_to, to_solving_value, flag_display_on_summary_logic,
+    #                 sender_judge, sender_name, sender_date, sender_comment,
+    #                 receiver_judge, receiver_name, receiver_date, receiver_comment
+    #             FROM prj_rfl
+    #             WHERE (project_info_id, phase_id) IN ({tuples_placeholder});
+    #         """
+    #         cur.execute(select_rfl_query)
+    #         existing_rows = cur.fetchall()
+
+    #         if not existing_rows:
+    #             print("No matching rows found in prj_rfl to clone.")
+    #             return False
+
+    #         # Step 4: Get existing keys to prevent duplicate insertions
+    #         # Key by (project_info_id, rfl_id, phase_id)
+    #         cur.execute("SELECT project_info_id, rfl_id, phase_id FROM prj_rfl;")
+    #         existing_keys = set(cur.fetchall())
+
+    #         # Step 5: Prepare new insert rows with new project_info_id
+    #         insert_rfl_data = []
+    #         for idx, new_project_id in enumerate(new_prj_ids):
+    #             for row in existing_rows:
+    #                 (
+    #                     _old_project_info_id, rfl_id, phase_id, requirement, function, logic,
+    #                     note, flag_to, to_solving_value, flag_display_on_summary_logic,
+    #                     sender_judge, sender_name, sender_date, sender_comment,
+    #                     receiver_judge, receiver_name, receiver_date, receiver_comment
+    #                 ) = row
+
+    #                 key = (new_project_id, rfl_id, phase_id)
+    #                 if key in existing_keys:
+    #                     continue  # skip duplicate
+    #                 existing_keys.add(key)
+
+    #                 insert_rfl_data.append((
+    #                     new_project_id, rfl_id, phase_id, requirement, function, logic,
+    #                     note, flag_to, to_solving_value, flag_display_on_summary_logic,
+    #                     sender_judge, sender_name, sender_date, sender_comment,
+    #                     receiver_judge, receiver_name, receiver_date, receiver_comment
+    #                 ))
+
+    #         # Step 6: Bulk insert new rows
+    #         if insert_rfl_data:
+    #             execute_values(cur, """
+    #                 INSERT INTO prj_rfl (
+    #                     project_info_id, rfl_id, phase_id, requirement, function, logic,
+    #                     note, flag_to, to_solving_value, flag_display_on_summary_logic,
+    #                     sender_judge, sender_name, sender_date, sender_comment,
+    #                     receiver_judge, receiver_name, receiver_date, receiver_comment
+    #                 ) VALUES %s;
+    #             """, insert_rfl_data)
+
+    #         # Commit transaction
+    #         self.conn.commit()
+    #         print("prj_rfl rows cloned successfully.")
+    #         return True
+
+    #     except psycopg2.Error as e:
+    #         if self.conn:
+    #             self.conn.rollback()
+    #         print(f"Database error: {e}")
+    #         raise e
+
     #     finally:
     #         if cur:
     #             cur.close()
@@ -4573,7 +5808,6 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             return prj_info_list.to_dict(orient='records')
         # Already in the correct format, return as-is
         return prj_info_list
-    
 
     # ==================================================================================
     # Helper method: Build SQL IN clause for tuple conditions
@@ -4586,6 +5820,18 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
     #   - fields: Number of fields in each tuple (default: 3)
     # Returns: String containing comma-separated tuples for SQL IN clause
     # ==================================================================================
+    # def _build_in_clause(self, cur, conditions, fields=3):
+    #     # Build comma-separated list of tuples with proper SQL escaping
+    #     # mogrify safely escapes values to prevent SQL injection
+    #     # return ', '.join(
+    #     #     cur.mogrify(f"({','.join(['%s'] * fields)})", cond).decode('utf-8')
+    #     #     for cond in conditions
+    #     # )
+    #     in_clause = ', '.join(
+    #         cur.mogrify(f"({','.join(['%s'] * fields)})", cond).decode('utf-8')
+    #         for cond in conditions
+    #     )
+    #     return f"({in_clause})"
 
     def _build_in_clause(self, cur, conditions, fields=3):
         clause_parts = []
@@ -4595,7 +5841,170 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             clause_parts.append(cur.mogrify(f"({','.join(['%s'] * fields)})", cond).decode('utf-8'))
         return ', '.join(clause_parts)
 
+    # ==================================================================================
+    # Main method: Clone SE (System Engineering) parameters to new projects
+    # ==================================================================================
+    # Purpose: Copy all SE parameter data from base projects to new target projects
+    # Process Flow:
+    #   1. Find target project IDs based on filter criteria
+    #   2. Get existing SE parameter data from base projects
+    #   3. Check for duplicates to avoid conflicts
+    #   4. Generate new unique IDs (surid, arasid)
+    #   5. Bulk insert into project_parameter and detail_data tables
+    # Parameters:
+    #   - prj_info_list: Base project information (source data to copy from)
+    #   - new_prjs: Target project codes to copy data to
+    #   - new_destinations: Target destinations
+    #   - new_drive_systems: Target drive systems
+    #   - new_lots: Target lots
+    # Returns: True if successful, False if failed
+    # ==================================================================================
 
+    def insert_new_se_project_copy(self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots, new_selected_phase_ids):
+        cur = self.conn.cursor()
+        try:
+            # Get new project IDs that match the filter criteria
+            new_prj_rows = self._fetch_new_project_ids(cur, new_prjs, new_destinations, new_drive_systems, new_lots)
+            new_prj_ids = [row[0] for row in new_prj_rows]
+
+            # Convert input to standardized format (list of dicts)
+            prj_info_list = self._convert_to_records(prj_info_list)
+
+            # Validate we have data to work with
+            if not prj_info_list or not new_prj_ids:
+                return False,'No Prj Info or New Prj Ids'
+
+            # Build condition tuples for filtering base project data
+            # Extract (project_id, phase_id, variation_id) from base project info
+            conditions = [(int(info['project_id']), int(info['phase_id']), int(info['variation_id'])) for info in prj_info_list]
+            where_clause = self._build_in_clause(cur, conditions, fields=3)
+
+            # Fetch all SE parameter rows from base projects
+            # These are the rows we want to clone to new projects
+            cur.execute(f"""
+                SELECT project_id, se_parameter_id, phase_id, variation_id,
+                       arasid, value, employee_number, z_note, surid, z_prj_number
+                FROM project_parameter
+                WHERE (project_id, phase_id, variation_id) IN ({where_clause})
+                ORDER BY arasid;
+            """)
+            existing_rows = cur.fetchall()
+            if not existing_rows:
+                return False,'No Existing Rows'
+
+            # Get current maximum surid for unique ID generation
+            # surid is a unique identifier that needs to be incremented for new records
+            cur.execute("SELECT MAX(surid) FROM project_parameter;")
+            max_surid = cur.fetchone()[0] or 0
+            
+            # Prepare keys to check for duplicate records
+            # Generate all possible combinations of (new_project_id, phase_id, variation_id)
+            # Using set to remove duplicates, then convert to list
+            # keys_to_check = list({
+            #     (int(new_project_id), int(row[2]), int(row[3]))
+            #     for new_project_id in new_prj_ids
+            #     for row in existing_rows
+            # })
+            # Generate all combinations of (new_project_id, se_parameter_id, new_phase_id, variation_id)
+            keys_to_check = list({
+                (int(new_project_id), row[1], int(phase_id), int(row[3]))
+                for new_project_id in new_prj_ids
+                for row in existing_rows
+                for phase_id in new_selected_phase_ids  # only new phases
+            })            
+            check_keys = [(key[0], key[2], key[3]) for key in keys_to_check]  # Extract only 3 elements
+            # print('check keys: ', check_keys)
+            check_clause = self._build_in_clause(cur, check_keys, fields=3)
+
+            # Fetch existing records to avoid duplicate inserts
+            # Check which (project_id, se_parameter_id, phase_id, variation_id) combinations already exist
+            cur.execute(f"""
+                SELECT project_id, se_parameter_id, phase_id, variation_id
+                FROM project_parameter
+                WHERE (project_id, phase_id, variation_id) IN ({check_clause});
+            """)
+            existing_keys = set(cur.fetchall())
+
+            # Prepare data for bulk insert
+            insert_se_parameter_data = []  # Data for project_parameter table
+            insert_detail_data = []        # Data for detail_data table
+            # Prepare project_statement insert data
+            insert_statement_data = []
+
+            # Loop through each new project and clone SE parameters
+            for idx, new_project_id in enumerate(new_prj_ids):
+                # Generate project number string for identification
+                z_prj_number = f"SElist_{new_prjs[idx]}_{new_destinations[idx]}_{new_drive_systems[idx]}"
+                
+                # # For each existing SE parameter row from base project
+                # for row in existing_rows:
+                #     # Create key to check if this combination already exists
+                #     key = (new_project_id, row[1], row[2], row[3])
+                #     if key in existing_keys:
+                #         continue  # Skip if already exists
+                    
+                #     # Generate new unique IDs for this record
+                #     max_surid += 1
+                #     new_arasid = f"add_test_{max_surid}"
+                    
+                #     # Prepare SE parameter data: (project_id, se_parameter_id, phase_id, variation_id, arasid, value, employee_number, z_note, surid, z_prj_number)
+                #     insert_se_parameter_data.append((*key, new_arasid, row[5], row[6], row[7], max_surid, z_prj_number))
+                    
+                #     # Prepare detail data: (z_paravalueid, employee_number, update_day, approval_status, user_memo, value)
+                #     insert_detail_data.append((new_arasid, row[6], datetime.datetime.now(), 0, None, None))
+
+                for phase_id in new_selected_phase_ids:
+                    for row in existing_rows:   
+                        key = (new_project_id, row[1], phase_id, row[3])
+                        if key in existing_keys:
+                            return False,'このプロジェクトはすでに存在しています。'
+                            # continue
+
+                        max_surid += 1
+                        new_arasid = f"add_test_{max_surid}"
+
+                        # Prepare project_parameter insert
+                        insert_se_parameter_data.append((
+                            *key, new_arasid, '', row[6], '', max_surid, z_prj_number
+                        ))
+
+                        # Prepare detail_data insert
+                        insert_detail_data.append((
+                            new_arasid, row[6], datetime.datetime.now(), 6, None, None
+                        ))
+                # Prepare project_statement insert
+            # Bulk insert SE parameters (execute_values is much faster than individual inserts)
+            if insert_se_parameter_data:
+                print('insert se para')
+                execute_values(cur, """
+                    INSERT INTO project_parameter (
+                        project_id, se_parameter_id, phase_id, variation_id,
+                        arasid, value, employee_number, z_note, surid, z_prj_number
+                    ) VALUES %s;
+                """, insert_se_parameter_data)
+
+            # Bulk insert detail data
+            if insert_detail_data:
+                print('detail data')
+                execute_values(cur, """
+                    INSERT INTO detail_data (
+                        z_paravalueid, employee_number, update_day,
+                        approval_status, user_memo, value
+                    ) VALUES %s;
+                """, insert_detail_data)
+
+            # Commit transaction to save all changes
+            self.conn.commit()
+            return True,'Success'
+
+        except Exception as e:
+            # Rollback all changes if any error occurs
+            self.conn.rollback()
+            print(f"Error: {e}")
+            raise
+        finally:
+            # Always close the cursor
+            cur.close()
 
     # ==================================================================================
     # Main method: Clone SE (System Engineering) parameters to new projects (Refactored version)
@@ -4654,7 +6063,7 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
             raise
         finally:
             cur.close()
-
+    
     # ==================================================================================
     # Helper methods for insert_new_se_project_copy
     # ==================================================================================
@@ -4749,7 +6158,7 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
                     
                     # Generate new unique IDs
                     max_surid += 1
-                    new_arasid = f"tmp_{max_surid}"
+                    new_arasid = f"add_test_{max_surid}"
                     
                     # Prepare project_parameter insert (with cleared value field)
                     insert_se_parameter_data.append((
@@ -4784,13 +6193,821 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
         return {'success': True, 'message': 'SE parameters cloned successfully'}
 
 
+    # def insert_new_se_project(self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots, new_selected_phase_ids):
+    #     """
+    #     Insert SE project parameters for new projects and selected phases.
+
+    #     Args:
+    #         prj_info_list (list): Base project info dicts with 'project_id', 'phase_id', 'variation_id'.
+    #         new_prjs (list): New project identifiers.
+    #         new_destinations (list): New destinations for projects.
+    #         new_drive_systems (list): New drive systems.
+    #         new_lots (list): New lots (not used directly here).
+    #         new_selected_phase_ids (list): List of new phase IDs to insert.
+
+    #     Returns:
+    #         bool: True if insertion succeeded, False otherwise.
+    #     """
+    #     cur = self.conn.cursor()
+    #     try:
+    #         # Fetch new project IDs based on input filters
+    #         new_prj_rows = self._fetch_new_project_ids(cur, new_prjs, new_destinations, new_drive_systems, new_lots)
+    #         new_prj_ids = [row[0] for row in new_prj_rows]
+
+    #         # Standardize input to list of dicts
+    #         prj_info_list = self._convert_to_records(prj_info_list)
+
+    #         # Nothing to insert if no base projects or new projects
+    #         if not prj_info_list or not new_prj_ids:
+    #             return False
+
+    #         # Build condition tuples for filtering base project data
+    #         conditions = [(int(info['project_id']), int(info['phase_id']), int(info['variation_id'])) for info in prj_info_list]
+    #         where_clause = self._build_in_clause(cur, conditions)
+
+    #         # Fetch all SE parameter rows from base projects
+    #         cur.execute(f"""
+    #             SELECT project_id, se_parameter_id, phase_id, variation_id,
+    #                 arasid, value, employee_number, z_note, surid, z_prj_number
+    #             FROM project_parameter
+    #             WHERE (project_id, phase_id, variation_id) IN ({where_clause})
+    #             ORDER BY arasid;
+    #         """)
+    #         existing_rows = cur.fetchall()
+    #         if not existing_rows:
+    #             return False
+
+    #         # Get current maximum surid for unique ID generation
+    #         cur.execute("SELECT MAX(surid) FROM project_parameter;")
+    #         max_surid = cur.fetchone()[0] or 0
+
+    #         # Generate all combinations of (new_project_id, se_parameter_id, new_phase_id, variation_id)
+    #         keys_to_check = list({
+    #             (int(new_project_id), row[1], int(phase_id), int(row[3]))
+    #             for new_project_id in new_prj_ids
+    #             for row in existing_rows
+    #             for phase_id in new_selected_phase_ids  # only new phases
+    #         })
+    #         if keys_to_check:
+    #             check_clause = self._build_in_clause(cur, keys_to_check)
+
+    #             # Fetch existing records to avoid duplicate inserts
+    #             cur.execute(f"""
+    #                 SELECT project_id, se_parameter_id, phase_id, variation_id
+    #                 FROM project_parameter
+    #                 WHERE (project_id, phase_id, variation_id) IN ({check_clause});
+    #             """)
+    #             existing_keys = set(cur.fetchall())
+    #         else:
+    #             existing_keys = set()
+
+    #         # Prepare data for bulk insert
+    #         insert_se_parameter_data = []
+    #         insert_detail_data = []
+
+    #         # Loop through new projects, existing SE parameters, and new phase IDs
+    #         for idx, new_project_id in enumerate(new_prj_ids):
+    #             z_prj_number = f"SElist_{new_prjs[idx]}_{new_destinations[idx]}_{new_drive_systems[idx]}"
+
+    #             for row in existing_rows:
+    #                 for phase_id in new_selected_phase_ids:
+    #                     key = (new_project_id, row[1], phase_id, row[3])
+    #                     if key in existing_keys:
+    #                         continue
+
+    #                     max_surid += 1
+    #                     new_arasid = f"add_test_{max_surid}"
+
+    #                     # Prepare project_parameter insert
+    #                     insert_se_parameter_data.append((
+    #                         *key, new_arasid, row[5], row[6], row[7], max_surid, z_prj_number
+    #                     ))
+
+    #                     # Prepare detail_data insert
+    #                     insert_detail_data.append((
+    #                         new_arasid, row[6], datetime.datetime.now(), 0, None, None
+    #                     ))
+
+    #         # Bulk insert SE parameters
+    #         if insert_se_parameter_data:
+    #             execute_values(cur, """
+    #                 INSERT INTO project_parameter (
+    #                     project_id, se_parameter_id, phase_id, variation_id,
+    #                     arasid, value, employee_number, z_note, surid, z_prj_number
+    #                 ) VALUES %s;
+    #             """, insert_se_parameter_data)
+
+    #         # Bulk insert detail data
+    #         if insert_detail_data:
+    #             execute_values(cur, """
+    #                 INSERT INTO detail_data (
+    #                     z_paravalueid, employee_number, update_day,
+    #                     approval_status, user_memo, value
+    #                 ) VALUES %s;
+    #             """, insert_detail_data)
+
+    #         # Commit transaction
+    #         self.conn.commit()
+    #         return True
+
+    #     except Exception as e:
+    #         self.conn.rollback()
+    #         print(f"Error: {e}")
+    #         raise
+    #     finally:
+    #         cur.close()
+
+
+
+    # ==================================================================================
+    # Main method: Clone R (Requirement) parameter data and setup relations to new projects
+    # ==================================================================================
+    # Purpose: Copy all R parameter data from base projects to new target projects
+    #          Also clone the setup_r_relation table which links setups to R parameters
+    # Process Flow:
+    #   1. Find target project IDs and setup IDs based on filter criteria
+    #   2. Get existing R parameter data from base projects
+    #   3. Clone R parameters to new projects (avoid duplicates)
+    #   4. Clone setup_r_relation records to link new setups with R parameters
+    # Parameters:
+    #   - prj_info_list: Base project information (source data to copy from)
+    #   - new_prjs: Target project codes to copy data to
+    #   - new_destinations: Target destinations
+    #   - new_drive_systems: Target drive systems
+    #   - new_lots: Target lots
+    # Returns: True if successful, False if failed
+    # # ==================================================================================
+    # def insert_new_rlist_and_rfl_list(self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots, new_selected_phase_ids):
+    #     cur = self.conn.cursor()
+    #     try:
+    #         # Get new project IDs AND setup IDs (needed for setup_r_relation later)
+    #         new_prj_setup_rows = self._fetch_new_project_ids(cur, new_prjs, new_destinations, new_drive_systems, new_lots, include_setup=True)
+    #         new_prj_ids = [row[0] for row in new_prj_setup_rows]  # Extract project IDs
+
+    #         # Convert input to standardized format
+    #         prj_info_list = self._convert_to_records(prj_info_list)
+    #         if not prj_info_list or not new_prj_ids or not new_selected_phase_ids:
+    #             return False
+
+    #         # Build condition tuples for filtering base project data
+    #         conditions = [(int(info['project_id']), int(info['phase_id']), int(info['variation_id'])) for info in prj_info_list]
+    #         where_clause = self._build_in_clause(cur, conditions)
+
+    #         # Fetch all R parameter rows from base projects
+    #         # R parameters contain requirement specifications, targets, status, etc.
+    #         cur.execute(f"""
+    #             SELECT project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+    #                    date, note, priority, employee_number, detail_and_output, tool,
+    #                    responsible, period, variation_id, flag_primary, design, judge,
+    #                    auto_judge_id, manager_approval, manager_approval_comment,
+    #                    judge_evidence, adjusted_target
+    #             FROM project_r_parameter
+    #             WHERE (project_id, phase_id, variation_id) IN ({where_clause})
+    #             ORDER BY project_id, phase_id, variation_id, r_parameter_id;
+    #         """)
+    #         existing_rows = cur.fetchall()
+    #         if not existing_rows:
+    #             return False
+
+    #         # Get existing keys from ALL R parameters to avoid duplicates
+    #         # Key is (project_id, r_parameter_id, phase_id, variation_id)
+    #         cur.execute("SELECT project_id, r_parameter_id, phase_id, variation_id FROM project_r_parameter;")
+    #         existing_keys = set(cur.fetchall())
+
+    #         # # Fetch existing project_statement keys to avoid duplicates
+    #         # cur.execute("SELECT project_id, phase_id, category FROM project_statement;")
+    #         # existing_statement_keys = set(cur.fetchall())
+
+    #         # Prepare R parameter data for bulk insert
+    #         insert_data = []
+    #         # # Prepare project_statement insert data
+    #         # insert_statement_data = []
+
+    #         # for new_project_id in new_prj_ids:
+    #         #     for row in existing_rows:
+    #         #         # Create unique key: (project_id, r_parameter_id, phase_id, variation_id)
+    #         #         key = (new_project_id, row[1], row[2], row[14])
+    #         #         if key in existing_keys:
+    #         #             continue  # Skip if already exists
+    #         #         # Add new project_id with all other fields from existing row
+    #         #         insert_data.append((new_project_id, *row[1:]))
+
+    #         # Loop through each new project
+    #         for new_project_id in new_prj_ids:
+    #             # Loop through each *new* phase ID (only these)
+    #             for new_phase_id in new_selected_phase_ids:
+    #                 for row in existing_rows:
+    #                     variation_id = row[14]
+    #                     r_param_id = row[1]
+    #                     key = (new_project_id, r_param_id, new_phase_id, variation_id)
+    #                     if key in existing_keys:
+    #                         continue
+
+    #                     # # Clone row but override phase_id
+    #                     # row_list = list(row)
+    #                     # row_list[2] = new_phase_id
+
+    #                     # Build new row, keeping most columns but blanking specific ones
+    #                     new_row = (
+    #                         new_project_id,       # project_id
+    #                         r_param_id,           # r_parameter_id
+    #                         new_phase_id,         # new phase_id
+    #                         row[3],               # spec_to_study
+    #                         row[4],               # status
+    #                         '',                   # target (blank)
+    #                         row[6],               # date
+    #                         '',                   # note (blank)
+    #                         row[8],               # priority
+    #                         row[9],               # employee_number
+    #                         row[10],              # detail_and_output
+    #                         row[11],              # tool
+    #                         row[12],              # responsible
+    #                         row[13],              # period
+    #                         variation_id,         # variation_id
+    #                         row[15],              # flag_primary
+    #                         '',                   # design (blank)
+    #                         '',                   # judge (blank)
+    #                         1,                    # auto_judge_id
+    #                         '',                   # manager_approval (blank)
+    #                         '',                   # manager_approval_comment (blank)
+    #                         '',                   # judge_evidence (blank)
+    #                         row[22]               # adjusted_target
+    #                     )
+
+    #                     insert_data.append(new_row)
+
+    #                     # insert_data.append((new_project_id, *row_list[1:]))
+
+    #                 # # Check if this project × phase × 'R' already exists
+    #                 # key = (new_project_id, new_phase_id, 'R')
+    #                 # if key not in existing_statement_keys:
+    #                 #     insert_statement_data.append((
+    #                 #         new_project_id,
+    #                 #         new_phase_id,
+    #                 #         'R',
+    #                 #         '',  # blank statement
+    #                 #         datetime.datetime.now()
+    #                 #     ))
+    #                 #     existing_statement_keys.add(key)  # set to avoid duplicates in this run
+    #         # Bulk insert R parameters
+    #         if insert_data:
+    #             execute_values(cur, """
+    #                 INSERT INTO project_r_parameter (
+    #                     project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+    #                     date, note, priority, employee_number, detail_and_output, tool,
+    #                     responsible, period, variation_id, flag_primary, design, judge,
+    #                     auto_judge_id, manager_approval, manager_approval_comment,
+    #                     judge_evidence, adjusted_target
+    #                 ) VALUES %s;
+    #             """, insert_data)
+
+    #         # # Bulk insert into project_statement
+    #         # if insert_statement_data:
+    #         #     execute_values(cur, """
+    #         #         INSERT INTO project_statement (
+    #         #             project_id, phase_id, category, statement, update_day
+    #         #         ) VALUES %s;
+    #         #     """, insert_statement_data)
+
+    #         # # ========== Clone setup_r_relation table ==========
+    #         # # This table links setup configurations to R parameters via use cases
+            
+    #         # # Get list of R parameter IDs that were used (for filtering relations)
+    #         # used_r_param_ids = list({row[1] for row in existing_rows})
+    #         # # Get list of old setup IDs from base projects
+    #         # old_setup_ids = list({int(info['setup_id']) for info in prj_info_list})
+            
+    #         # # Get next available ID for setup_r_relation table
+    #         # cur.execute("SELECT MAX(id) FROM setup_r_relation;")
+    #         # next_id = (cur.fetchone()[0] or 0) + 1
+
+    #         # # Fetch setup_r_relation rows from base projects
+    #         # # Only get relations for the R parameters we're cloning
+    #         # placeholders = ','.join(['%s'] * len(used_r_param_ids))
+    #         # cur.execute(f"""
+    #         #     SELECT setup_id, r_parameter_id, usecase_id
+    #         #     FROM setup_r_relation
+    #         #     WHERE setup_id = ANY(%s)
+    #         #     AND r_parameter_id IN ({placeholders});
+    #         # """, (old_setup_ids, *used_r_param_ids))
+    #         # setup_rel_rows = cur.fetchall()
+
+    #         # # Get existing setup_r_relation keys to avoid duplicates
+    #         # cur.execute("SELECT setup_id, r_parameter_id, usecase_id FROM setup_r_relation;")
+    #         # existing_setup_keys = set(cur.fetchall())
+
+    #         # # Prepare setup_r_relation data for bulk insert
+    #         # insert_setup_rel_data = []
+    #         # for (_, new_setup_id) in new_prj_setup_rows:  # Loop through new setup IDs
+    #         #     for row in setup_rel_rows:  # Loop through existing relations
+    #         #         key = (new_setup_id, row[1], row[2])  # (setup_id, r_parameter_id, usecase_id)
+    #         #         if key in existing_setup_keys:
+    #         #             continue  # Skip if already exists
+    #         #         # Add new relation with auto-incremented ID
+    #         #         insert_setup_rel_data.append((next_id, new_setup_id, row[1], row[2]))
+    #         #         next_id += 1
+
+    #         # # Bulk insert setup_r_relation records
+    #         # if insert_setup_rel_data:
+    #         #     execute_values(cur, """
+    #         #         INSERT INTO setup_r_relation (
+    #         #             id, setup_id, r_parameter_id, usecase_id
+    #         #         ) VALUES %s;
+    #         #     """, insert_setup_rel_data)
+
+
+    #         # ========== Clone setup_r_relation table ==========
+
+    #         # 1️⃣ Get old setup IDs from base projects
+    #         old_setup_ids = list({int(info['setup_id']) for info in prj_info_list})
+
+    #         # 2️⃣ Get next available ID for setup_r_relation
+    #         cur.execute("SELECT MAX(id) FROM setup_r_relation;")
+    #         next_id = (cur.fetchone()[0] or 0) + 1
+
+    #         # 3️⃣ Fetch existing relations for old setups
+    #         cur.execute("""
+    #             SELECT setup_id, r_parameter_id, usecase_id
+    #             FROM setup_r_relation
+    #             WHERE setup_id = ANY(%s);
+    #         """, (old_setup_ids,))
+
+    #         # === Clone setup_r_relation based on base project RFL links ===
+    #         base_prj_ids = [int(info['project_id']) for info in prj_info_list]
+    #         base_phase_ids = [int(info['phase_id']) for info in prj_info_list]
+
+    #         # cur.execute(f"""
+    #         #     SELECT sr.id, sr.setup_id, sr.r_parameter_id, sr.usecase_id
+    #         #     FROM setup_r_relation sr
+    #         #     WHERE sr.setup_id = ANY(%s)
+    #         #     AND sr.id IN (
+    #         #         SELECT r.requirement_s_id
+    #         #         FROM rfl r
+    #         #         WHERE r.id IN (
+    #         #             SELECT rf.rfl_id
+    #         #             FROM prj_rfl rf
+    #         #             WHERE rf.project_info_id = ANY(%s)
+    #         #                 AND rf.phase_id = ANY(%s)
+    #         #         )
+    #         #     );
+    #         # """, (old_setup_ids, base_prj_ids, base_phase_ids))
+    #         # setup_r_rows = cur.fetchall()
+
+    #         setup_rel_rows = cur.fetchall()
+
+    #         if not setup_rel_rows:
+    #             print("No setup_r_relation rows found for base setups.")
+    #         else:
+    #             # 4️⃣ Get existing keys to prevent duplicates
+    #             cur.execute("SELECT setup_id, r_parameter_id, usecase_id FROM setup_r_relation;")
+    #             existing_setup_keys = set(cur.fetchall())
+
+    #             # 5️⃣ Prepare new rows for insertion
+    #             insert_setup_rel_data = []
+    #             for (_, new_setup_id) in new_prj_setup_rows:
+    #                 for old_row in setup_rel_rows:
+    #                     new_key = (new_setup_id, old_row[1], old_row[2])
+    #                     if new_key in existing_setup_keys:
+    #                         continue  # skip duplicates
+
+    #                     insert_setup_rel_data.append((next_id, new_setup_id, old_row[1], old_row[2]))
+    #                     next_id += 1
+
+    #             # 6️⃣ Bulk insert cloned relations
+    #             if insert_setup_rel_data:
+    #                 execute_values(cur, """
+    #                     INSERT INTO setup_r_relation (
+    #                         id, setup_id, r_parameter_id, usecase_id
+    #                     ) VALUES %s;
+    #                 """, insert_setup_rel_data)
+
+
+    #         # ========== Clone setup_l_relation table ==========
+    #         # 1️⃣ Fetch existing L relations for old setups
+    #         cur.execute("""
+    #             SELECT setup_id, l_parameter_id, usecase_id
+    #             FROM setup_l_relation
+    #             WHERE setup_id = ANY(%s);
+    #         """, (old_setup_ids,))
+    #         setup_l_rows = cur.fetchall()
+
+    #         # === Clone setup_l_relation based on base project RFL links ===
+    #         # cur.execute(f"""
+    #         #     SELECT sl.id, sl.setup_id, sl.l_parameter_id, sl.usecase_id
+    #         #     FROM setup_l_relation sl
+    #         #     WHERE sl.setup_id = ANY(%s)
+    #         #     AND sl.id IN (
+    #         #         SELECT r.logic_s_id
+    #         #         FROM rfl r
+    #         #         WHERE r.id IN (
+    #         #             SELECT rf.rfl_id
+    #         #             FROM prj_rfl rf
+    #         #             WHERE rf.project_info_id = ANY(%s)
+    #         #                 AND rf.phase_id = ANY(%s)
+    #         #         )
+    #         #     );
+    #         # """, (old_setup_ids, base_prj_ids, base_phase_ids))
+
+
+    #         setup_l_rows = cur.fetchall()
+
+
+    #         if not setup_l_rows:
+    #             print("No setup_l_relation rows found for base setups.")
+    #         else:
+    #             # 2️⃣ Get next available ID for setup_l_relation
+    #             cur.execute("SELECT MAX(id) FROM setup_l_relation;")
+    #             next_l_id = (cur.fetchone()[0] or 0) + 1
+
+    #             # 3️⃣ Get existing setup_l_relation keys to avoid duplicates
+    #             cur.execute("SELECT setup_id, l_parameter_id, usecase_id FROM setup_l_relation;")
+    #             existing_setup_l_keys = set(cur.fetchall())
+
+    #             # 4️⃣ Prepare setup_l_relation data for bulk insert
+    #             insert_setup_l_rel_data = []
+    #             for (_, new_setup_id) in new_prj_setup_rows:  # Loop through new setup IDs
+    #                 for old_row in setup_l_rows:  # Loop through existing relations
+    #                     new_key = (new_setup_id, old_row[1], old_row[2])
+    #                     if new_key in existing_setup_l_keys:
+    #                         continue  # Skip if already exists
+
+    #                     insert_setup_l_rel_data.append((next_l_id, new_setup_id, old_row[1], old_row[2]))
+    #                     next_l_id += 1
+
+    #             # 5️⃣ Bulk insert setup_l_relation records
+    #             if insert_setup_l_rel_data:
+    #                 execute_values(cur, """
+    #                     INSERT INTO setup_l_relation (
+    #                         id, setup_id, l_parameter_id, usecase_id
+    #                     ) VALUES %s;
+    #                 """, insert_setup_l_rel_data)
+
+
+
+
+    #         # ===============================================================
+    #         # CLONE prj_rfl (with new phase IDs)
+    #         # ===============================================================
+    #         conditions_rfl = [(int(info['project_id']), int(info['phase_id'])) for info in prj_info_list]
+    #         where_clause_rfl = self._build_in_clause(cur, conditions_rfl, fields=2)
+
+    #         cur.execute(f"""
+    #             SELECT project_info_id, rfl_id, phase_id, requirement, function, logic,
+    #                 note, flag_to, to_solving_value, flag_display_on_summary_logic,
+    #                 sender_judge, sender_name, sender_date, sender_comment,
+    #                 receiver_judge, receiver_name, receiver_date, receiver_comment
+    #             FROM prj_rfl
+    #             WHERE (project_info_id, phase_id) IN ({where_clause_rfl});
+    #         """)
+    #         existing_rfl_rows = cur.fetchall()
+
+    #         if existing_rfl_rows:
+    #             # Get all existing keys to avoid duplicates
+    #             cur.execute("SELECT project_info_id, rfl_id, phase_id FROM prj_rfl;")
+    #             existing_rfl_keys = set(cur.fetchall())
+
+    #             insert_rfl_data = []
+    #             for new_project_id in new_prj_ids:
+    #                 for new_phase_id in new_selected_phase_ids:
+    #                     for row in existing_rfl_rows:
+    #                         key = (new_project_id, row[1], new_phase_id)  # new phase here!
+    #                         if key in existing_rfl_keys:
+    #                             continue
+
+    #                         # Clone row but use new project & phase
+    #                         new_rfl_row = (
+    #                             new_project_id,      # project_info_id
+    #                             row[1],              # rfl_id
+    #                             new_phase_id,        # new phase_id
+    #                             row[3],              # requirement
+    #                             row[4],              # function
+    #                             '',              # logic
+    #                             '',              # note
+    #                             row[7],              # flag_to
+    #                             None,              # to_solving_value
+    #                             0,              # flag_display_on_summary_logic
+    #                             None,             # sender_judge
+    #                             None,             # sender_name
+    #                             None,             # sender_date
+    #                             None,             # sender_comment
+    #                             None,             # receiver_judge
+    #                             None,             # receiver_name
+    #                             None,             # receiver_date
+    #                             None,             # receiver_comment
+    #                         )
+    #                         insert_rfl_data.append(new_rfl_row)
+
+    #             # Bulk insert RFL
+    #             if insert_rfl_data:
+    #                 execute_values(cur, """
+    #                     INSERT INTO prj_rfl (
+    #                         project_info_id, rfl_id, phase_id, requirement, function, logic,
+    #                         note, flag_to, to_solving_value, flag_display_on_summary_logic,
+    #                         sender_judge, sender_name, sender_date, sender_comment,
+    #                         receiver_judge, receiver_name, receiver_date, receiver_comment
+    #                     ) VALUES %s;
+    #                 """, insert_rfl_data)
+
+
+    #         # Commit all changes
+    #         self.conn.commit()
+    #         return True
+
+    #     except Exception as e:
+    #         # Rollback all changes if any error occurs
+    #         self.conn.rollback()
+    #         print(f"Error: {e}")
+    #         raise
+    #     finally:
+    #         # Always close the cursor
+    #         cur.close()
+
+
+
+
+
+    def insert_new_rlist_and_rfl_list_copy(
+        self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots, new_selected_phase_ids
+    ):
+        cur = self.conn.cursor()
+        try:
+            # ===============================================================
+            # STEP 1: Fetch new project and setup IDs
+            # ===============================================================
+            new_prj_setup_rows = self._fetch_new_project_ids(
+                cur, new_prjs, new_destinations, new_drive_systems, new_lots, include_setup=True
+            )
+            new_prj_ids = [row[0] for row in new_prj_setup_rows]
+            # if not prj_info_list or not new_prj_ids or not new_selected_phase_ids:
+            #     return False
+
+            if (
+                (hasattr(prj_info_list, "empty") and prj_info_list.empty)
+                or (not hasattr(prj_info_list, "empty") and not prj_info_list)
+                or not new_prj_ids
+                or not new_selected_phase_ids
+            ):
+                return False,'No Prj Info or New Prj Ids'
+
+
+            # Convert project info
+            prj_info_list = self._convert_to_records(prj_info_list)
+
+            # ===============================================================
+            # STEP 2: Clone project_r_parameter (R list)
+            # ===============================================================
+            conditions = [(int(i['project_id']), int(i['phase_id']), int(i['variation_id'])) for i in prj_info_list]
+            where_clause = self._build_in_clause(cur, conditions)
+
+            cur.execute(f"""
+                SELECT project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+                    date, note, priority, employee_number, detail_and_output, tool,
+                    responsible, period, variation_id, flag_primary, design, judge,
+                    auto_judge_id, manager_approval, manager_approval_comment,
+                    judge_evidence, adjusted_target
+                FROM project_r_parameter
+                WHERE (project_id, phase_id, variation_id) IN ({where_clause})
+                ORDER BY project_id, phase_id, variation_id, r_parameter_id;
+            """)
+            existing_rows = cur.fetchall()
+            if not existing_rows:
+                return False,'No Existing Rows'
+
+            cur.execute("SELECT project_id, r_parameter_id, phase_id, variation_id FROM project_r_parameter;")
+            existing_keys = set(cur.fetchall())
+
+            insert_data = []
+            for new_project_id in new_prj_ids:
+                for new_phase_id in new_selected_phase_ids:
+                    for row in existing_rows:
+                        variation_id = row[14]
+                        r_param_id = row[1]
+                        key = (new_project_id, r_param_id, new_phase_id, variation_id)
+                        if key in existing_keys:
+                            return False,'このプロジェクトはすでに存在しています。'
+                            # continue
+
+                        new_row = (
+                            new_project_id, r_param_id, new_phase_id,
+                            row[3], row[4], '', row[6], '', row[8], row[9],
+                            row[10], row[11], row[12], row[13], variation_id, row[15],
+                            '', '', 1, '', '', '', row[22]
+                        )
+                        insert_data.append(new_row)
+
+            if insert_data:
+                execute_values(cur, """
+                    INSERT INTO project_r_parameter (
+                        project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+                        date, note, priority, employee_number, detail_and_output, tool,
+                        responsible, period, variation_id, flag_primary, design, judge,
+                        auto_judge_id, manager_approval, manager_approval_comment,
+                        judge_evidence, adjusted_target
+                    ) VALUES %s;
+                """, insert_data)
+
+            # ===============================================================
+            # STEP 3: Clone setup_r_relation and setup_l_relation
+            # ===============================================================
+            old_setup_ids = list({int(info['setup_id']) for info in prj_info_list})
+
+            # --- setup_r_relation ---
+            cur.execute("SELECT MAX(id) FROM setup_r_relation;")
+            next_r_id = (cur.fetchone()[0] or 0) + 1
+            cur.execute("SELECT setup_id, r_parameter_id, usecase_id, id FROM setup_r_relation WHERE setup_id = ANY(%s);", (old_setup_ids,))
+            setup_r_rows = cur.fetchall()
+            cur.execute("SELECT setup_id, r_parameter_id, usecase_id FROM setup_r_relation;")
+            existing_setup_r_keys = set(cur.fetchall())
+
+            old_to_new_r_map = {}
+            insert_r_data = []
+            for (_, new_setup_id) in new_prj_setup_rows:
+                for old_row in setup_r_rows:
+                    new_key = (new_setup_id, old_row[1], old_row[2])
+                    if new_key in existing_setup_r_keys:
+                        continue
+                    insert_r_data.append((next_r_id, new_setup_id, old_row[1], old_row[2]))
+                    old_to_new_r_map[old_row[3]] = next_r_id  # map old ID → new ID
+                    next_r_id += 1
+
+            if insert_r_data:
+                execute_values(cur, """
+                    INSERT INTO setup_r_relation (id, setup_id, r_parameter_id, usecase_id)
+                    VALUES %s;
+                """, insert_r_data)
+
+            # --- setup_l_relation ---
+            cur.execute("SELECT MAX(id) FROM setup_l_relation;")
+            next_l_id = (cur.fetchone()[0] or 0) + 1
+            cur.execute("SELECT setup_id, l_parameter_id, usecase_id, id FROM setup_l_relation WHERE setup_id = ANY(%s);", (old_setup_ids,))
+            setup_l_rows = cur.fetchall()
+            cur.execute("SELECT setup_id, l_parameter_id, usecase_id FROM setup_l_relation;")
+            existing_setup_l_keys = set(cur.fetchall())
+
+            old_to_new_l_map = {}
+            insert_l_data = []
+            for (_, new_setup_id) in new_prj_setup_rows:
+                for old_row in setup_l_rows:
+                    new_key = (new_setup_id, old_row[1], old_row[2])
+                    if new_key in existing_setup_l_keys:
+                        continue
+                    insert_l_data.append((next_l_id, new_setup_id, old_row[1], old_row[2]))
+                    old_to_new_l_map[old_row[3]] = next_l_id
+                    next_l_id += 1
+
+            if insert_l_data:
+                execute_values(cur, """
+                    INSERT INTO setup_l_relation (id, setup_id, l_parameter_id, usecase_id)
+                    VALUES %s;
+                """, insert_l_data)
+
+            # ===============================================================
+            # STEP 4: Clone rfl (using mapped setup_r_relation and setup_l_relation)
+            # ===============================================================
+            base_project_ids = [int(info['project_id']) for info in prj_info_list]
+            base_phase_ids = [int(info['phase_id']) for info in prj_info_list]
+
+            cur.execute(f"""
+                SELECT id, requirement_s_id, function_id, logic_s_id, index,
+                    requirement_condition, function_condition, logic_condition,
+                    is_to, to_pattern, wp_id
+                FROM rfl
+                WHERE id IN (
+                    SELECT rfl_id
+                    FROM prj_rfl
+                    WHERE project_info_id = ANY(%s)
+                    AND phase_id = ANY(%s)
+                )
+                ORDER BY index,requirement_s_id,logic_s_id;
+            """, (base_project_ids, base_phase_ids))
+
+            old_rfl_rows = cur.fetchall()
+            cur.execute("SELECT MAX(id) FROM rfl;")
+            next_rfl_id = (cur.fetchone()[0] or 0) + 1
+            print('next rfl id: ', next_rfl_id)
+            old_to_new_rfl_map = {}
+            insert_rfl_data = []
+            for row in old_rfl_rows:
+                old_req_id, old_logic_id = row[1], row[3]
+                new_req_id = old_to_new_r_map.get(old_req_id)
+                new_logic_id = old_to_new_l_map.get(old_logic_id)
+                if not new_req_id or not new_logic_id:
+                    continue
+
+                new_row = (
+                    next_rfl_id, new_req_id, row[2], new_logic_id, row[4],
+                    row[5], row[6], row[7], row[8], row[9], row[10]
+                )
+                old_to_new_rfl_map[row[0]] = next_rfl_id
+                insert_rfl_data.append(new_row)
+                next_rfl_id += 1
+
+            if insert_rfl_data:
+                execute_values(cur, """
+                    INSERT INTO rfl (
+                        id, requirement_s_id, function_id, logic_s_id, index,
+                        requirement_condition, function_condition, logic_condition,
+                        is_to, to_pattern, wp_id
+                    ) VALUES %s;
+                """, insert_rfl_data)
+
+            # ===============================================================
+            # STEP 5: Clone prj_rfl (with new rfl IDs)
+            # ===============================================================
+            conditions_rfl = [(int(i['project_id']), int(i['phase_id'])) for i in prj_info_list]
+            where_clause_rfl = self._build_in_clause(cur, conditions_rfl, fields=2)
+
+            cur.execute(f"""
+                SELECT project_info_id, rfl_id, phase_id, requirement, function, logic,
+                    note, flag_to, to_solving_value, flag_display_on_summary_logic,
+                    sender_judge, sender_name, sender_date, sender_comment,
+                    receiver_judge, receiver_name, receiver_date, receiver_comment
+                FROM prj_rfl
+                WHERE (project_info_id, phase_id) IN ({where_clause_rfl});
+            """)
+            existing_prj_rfl_rows = cur.fetchall()
+
+            if existing_prj_rfl_rows:
+                cur.execute("SELECT project_info_id, rfl_id, phase_id FROM prj_rfl;")
+                existing_prj_rfl_keys = set(cur.fetchall())
+
+                insert_prj_rfl_data = []
+                for new_project_id in new_prj_ids:
+                    for new_phase_id in new_selected_phase_ids:
+                        for row in existing_prj_rfl_rows:
+                            old_rfl_id = row[1]
+                            new_rfl_id = old_to_new_rfl_map.get(old_rfl_id)
+                            if not new_rfl_id:
+                                continue
+                            key = (new_project_id, new_rfl_id, new_phase_id)
+                            if key in existing_prj_rfl_keys:
+                                continue
+
+                            new_prj_rfl_row = (
+                                new_project_id, new_rfl_id, new_phase_id,
+                                row[3], row[4], '', '', row[7], None, 0,
+                                None, None, None, None, None, None, None, None
+                            )
+                            insert_prj_rfl_data.append(new_prj_rfl_row)
+
+                if insert_prj_rfl_data:
+                    execute_values(cur, """
+                        INSERT INTO prj_rfl (
+                            project_info_id, rfl_id, phase_id, requirement, function, logic,
+                            note, flag_to, to_solving_value, flag_display_on_summary_logic,
+                            sender_judge, sender_name, sender_date, sender_comment,
+                            receiver_judge, receiver_name, receiver_date, receiver_comment
+                        ) VALUES %s;
+                    """, insert_prj_rfl_data)
+
+            
+            # ===============================================================
+            # STEP 7: Clone l_r_relation (based on new RFL + setup relations)
+            # ===============================================================
+            cur.execute("SELECT MAX(id) FROM l_r_relation;")
+            next_lr_id = (cur.fetchone()[0] or 0) + 1
+            print('next lr id: ', next_lr_id)
+
+            # Fetch all existing l_r_relation rows
+            cur.execute("SELECT id, r_s_id, l_s_id FROM l_r_relation;")
+            old_lr_rows = cur.fetchall()
+
+            insert_lr_data = []
+            for old_id, old_r_s_id, old_l_s_id in old_lr_rows:
+                new_r_s_id = old_to_new_r_map.get(old_r_s_id)
+                new_l_s_id = old_to_new_l_map.get(old_l_s_id)
+
+                # Insert only if both sides exist in new setup relations
+                if new_r_s_id and new_l_s_id:
+                    insert_lr_data.append((next_lr_id, new_r_s_id, new_l_s_id))
+                    next_lr_id += 1
+
+            if insert_lr_data:
+                execute_values(cur, """
+                    INSERT INTO l_r_relation (id, r_s_id, l_s_id)
+                    VALUES %s;
+                """, insert_lr_data)
+
+            # ===============================================================
+            # STEP 6: Commit
+            # ===============================================================
+            self.conn.commit()
+            return True,'Success'
+
+        except Exception as e:
+            self.conn.rollback()
+            print(f"Error: {e}")
+            raise
+        finally:
+            cur.close()
+
     # ==================================================================================
     # Main method: Clone R list project data to new projects (Refactored version)
     # ==================================================================================
     # Purpose: Copy all R list data including R parameters, RFL relations, and setup relations
     # Returns: Tuple (success: bool, message: str)
     # ==================================================================================
-    def insert_new_rlist_and_rfl_list(
+    def insert_new_rlist_and_rfl_list_newwww(
         self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots, new_selected_phase_ids
     ):
         """
@@ -5209,22 +7426,750 @@ ORDER BY se.z_prj_number, se.z_class_name_get_str, wp_order;
                 VALUES %s;
             """, insert_data)
     
+    def insert_new_rlist_and_rfl_list(
+        self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots, new_selected_phase_ids
+    ):
+        """
+        Clone R list project data with conditional logic:
+        - If all setup_r_relation data already exists, only clone prj_rfl (if base project record exists)
+        - Otherwise, perform full clone like insert_new_rlist_and_rfl_list
+        
+        Process:
+        1. Validate inputs and fetch target project IDs
+        2. Clone project_r_parameter records
+        3. Check if setup_r_relation data already exists
+        4. If all exists:
+           - Only clone prj_rfl using existing RFL IDs from base project
+        5. If not all exists (needs insert):
+           - Clone setup_r_relation and setup_l_relation with ID mapping
+           - Clone rfl records using mapped relation IDs
+           - Clone prj_rfl records
+           - Clone l_r_relation records
+        
+        Args:
+            prj_info_list: Base project information (DataFrame or list of dicts)
+            new_prjs: Target project codes
+            new_destinations: Target destinations
+            new_drive_systems: Target drive systems
+            new_lots: Target lots
+            new_selected_phase_ids: Target phase IDs
+            
+        Returns:
+            Tuple of (success: bool, message: str)
+        """
+        cur = self.conn.cursor()
+        try:
+            # Validate and prepare data
+            validation_result = self._validate_and_prepare_rlist_data(
+                cur, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots, new_selected_phase_ids
+            )
+            if not validation_result['success']:
+                return False, validation_result['message']
+            
+            new_prj_ids = validation_result['new_prj_ids']
+            new_prj_setup_rows = validation_result['new_prj_setup_rows']
+            prj_info_list = validation_result['prj_info_list']
+            
+            # Clone R parameter data
+            clone_result = self._clone_r_parameters(
+                cur, prj_info_list, new_prj_ids, new_selected_phase_ids
+            )
+            if not clone_result['success']:
+                return False, clone_result['message']
+            
+            # Check if setup_r_relation data already exists
+            old_setup_ids = list({int(info['setup_id']) for info in prj_info_list})
+            
+            # Fetch existing setup_r_relation rows from base project
+            cur.execute(
+                "SELECT setup_id, r_parameter_id, usecase_id, id FROM setup_r_relation WHERE setup_id = ANY(%s);",
+                (old_setup_ids,)
+            )
+            setup_r_rows = cur.fetchall()
+            
+            # Check if all records would already exist in target
+            cur.execute("SELECT setup_id, r_parameter_id, usecase_id FROM setup_r_relation;")
+            existing_keys = set(cur.fetchall())
+            
+            # Check if any new inserts would be needed
+            needs_insert = False
+            for (_, new_setup_id) in new_prj_setup_rows:
+                for old_row in setup_r_rows:
+                    new_key = (new_setup_id, old_row[1], old_row[2])
+                    if new_key not in existing_keys:
+                        needs_insert = True
+                        break
+                if needs_insert:
+                    break
+            
+            if not needs_insert:
+                print("All setup_r_relation data already exists. Only cloning prj_rfl if base project records exist.")
+                
+                # Only clone prj_rfl using existing RFL IDs from base project
+                self._clone_prj_rfl_existing_only(
+                    cur, prj_info_list, new_prj_ids, new_selected_phase_ids
+                )
+                
+                self.conn.commit()
+                return True, 'Success'
+            
+            else:
+                print("setup_r_relation needs new inserts. Performing full clone.")
+                
+                # Perform full clone
+                # Clone setup relations and get ID mappings
+                relation_maps = self._clone_setup_relations(
+                    cur, prj_info_list, new_prj_setup_rows
+                )
+                
+                # Clone RFL data using relation mappings
+                rfl_map = self._clone_rfl_data(
+                    cur, prj_info_list, relation_maps['r_map'], relation_maps['l_map']
+                )
+                
+                # Clone project RFL associations
+                self._clone_prj_rfl(
+                    cur, prj_info_list, new_prj_ids, new_selected_phase_ids, rfl_map
+                )
+                
+                # Clone L-R relations
+                self._clone_lr_relations(
+                    cur, relation_maps['r_map'], relation_maps['l_map']
+                )
+                
+                self.conn.commit()
+                return True, 'Success'
+            
+        except Exception as e:
+            self.conn.rollback()
+            print(f"Error in insert_new_rlist_and_rfl_list_new: {e}")
+            raise
+        finally:
+            cur.close()
+    
+    def _clone_prj_rfl_existing_only(self, cur, prj_info_list, new_prj_ids, new_selected_phase_ids):
+        """
+        Clone prj_rfl records using existing RFL IDs from base project.
+        Used when setup_r_relation data already exists.
+        """
+        # Build conditions for fetching existing prj_rfl
+        conditions = [(int(info['project_id']), int(info['phase_id'])) for info in prj_info_list]
+        where_clause = self._build_in_clause(cur, conditions, fields=2)
+        
+        # Fetch existing prj_rfl rows from base project
+        cur.execute(f"""
+            SELECT project_info_id, rfl_id, phase_id, requirement, function, logic,
+                note, flag_to, to_solving_value, flag_display_on_summary_logic,
+                sender_judge, sender_name, sender_date, sender_comment,
+                receiver_judge, receiver_name, receiver_date, receiver_comment
+            FROM prj_rfl
+            WHERE (project_info_id, phase_id) IN ({where_clause});
+        """)
+        existing_rows = cur.fetchall()
+        
+        if not existing_rows:
+            print("No base project records found in prj_rfl. Skipping clone.")
+            return
+        
+        # Get existing keys to avoid duplicates
+        cur.execute("SELECT project_info_id, rfl_id, phase_id FROM prj_rfl;")
+        existing_keys = set(cur.fetchall())
+        
+        # Prepare insert data - use existing rfl_id directly (no mapping)
+        insert_data = []
+        for new_project_id in new_prj_ids:
+            for new_phase_id in new_selected_phase_ids:
+                for row in existing_rows:
+                    rfl_id = row[1]  # Use existing rfl_id
+                    
+                    key = (new_project_id, new_phase_id)
+                    if key in existing_keys:
+                        continue
+                    
+                    # Create new row with cleared approval data
+                    new_row = (
+                        new_project_id, rfl_id, new_phase_id,
+                        row[3], row[4], '',          # requirement, function, logic (cleared)
+                        '', row[7], None, 0,         # note (cleared), flag_to, to_solving_value, flag_display
+                        None, None, None, None,      # sender data (cleared)
+                        None, None, None, None       # receiver data (cleared)
+                    )
+                    insert_data.append(new_row)
+        
+        # Bulk insert prj_rfl records
+        if insert_data:
+            print(f"Inserting {len(insert_data)} prj_rfl records with existing RFL IDs.")
+            execute_values(cur, """
+                INSERT INTO prj_rfl (
+                    project_info_id, rfl_id, phase_id, requirement, function, logic,
+                    note, flag_to, to_solving_value, flag_display_on_summary_logic,
+                    sender_judge, sender_name, sender_date, sender_comment,
+                    receiver_judge, receiver_name, receiver_date, receiver_comment
+                ) VALUES %s;
+            """, insert_data)
+        else:
+            print("No new prj_rfl records to insert (all already exist).")
+
+
+    def insert_new_rlist_and_rfl_listttt(self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots, new_selected_phase_ids):
+        cur = self.conn.cursor()
+        try:
+            # Get new project IDs AND setup IDs
+            new_prj_setup_rows = self._fetch_new_project_ids(cur, new_prjs, new_destinations, new_drive_systems, new_lots, include_setup=True)
+            new_prj_ids = [row[0] for row in new_prj_setup_rows]
+
+            # Convert input to list of dicts
+            prj_info_list = self._convert_to_records(prj_info_list)
+
+            if not prj_info_list or not new_prj_ids or not new_selected_phase_ids:
+                return False
+
+            # ----------------- Clone project_r_parameter -----------------
+            conditions = [(int(info['project_id']), int(info['phase_id']), int(info['variation_id'])) for info in prj_info_list]
+            where_clause = self._build_in_clause(cur, conditions)
+
+            cur.execute(f"""
+                SELECT project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+                    date, note, priority, employee_number, detail_and_output, tool,
+                    responsible, period, variation_id, flag_primary, design, judge,
+                    auto_judge_id, manager_approval, manager_approval_comment,
+                    judge_evidence, adjusted_target
+                FROM project_r_parameter
+                WHERE (project_id, phase_id, variation_id) IN ({where_clause})
+                ORDER BY project_id, phase_id, variation_id, r_parameter_id;
+            """)
+            existing_rows = cur.fetchall()
+            if not existing_rows:
+                return False
+
+            cur.execute("SELECT project_id, r_parameter_id, phase_id, variation_id FROM project_r_parameter;")
+            existing_keys = set(cur.fetchall())
+
+            insert_data = []
+            for new_project_id in new_prj_ids:
+                for new_phase_id in new_selected_phase_ids:
+                    for row in existing_rows:
+                        variation_id = row[14]
+                        r_param_id = row[1]
+                        key = (new_project_id, r_param_id, new_phase_id, variation_id)
+                        if key in existing_keys:
+                            continue
+
+                        new_row = (
+                            new_project_id, r_param_id, new_phase_id, row[3], row[4], '',
+                            row[6], '', row[8], row[9], row[10], row[11],
+                            row[12], row[13], variation_id, row[15], '',
+                            '', 1, '', '', '', row[22]
+                        )
+                        insert_data.append(new_row)
+
+            if insert_data:
+                execute_values(cur, """
+                    INSERT INTO project_r_parameter (
+                        project_id, r_parameter_id, phase_id, spec_to_study, status, target,
+                        date, note, priority, employee_number, detail_and_output, tool,
+                        responsible, period, variation_id, flag_primary, design, judge,
+                        auto_judge_id, manager_approval, manager_approval_comment,
+                        judge_evidence, adjusted_target
+                    ) VALUES %s;
+                """, insert_data)
+
+            # ----------------- Clone setup_r_relation -----------------
+            old_setup_ids = list({int(info['setup_id']) for info in prj_info_list})
+            cur.execute("SELECT MAX(id) FROM setup_r_relation;")
+            next_r_id = (cur.fetchone()[0] or 0) + 1
+
+            cur.execute("""
+                SELECT id, setup_id, r_parameter_id, usecase_id
+                FROM setup_r_relation
+                WHERE setup_id = ANY(%s);
+            """, (old_setup_ids,))
+            setup_r_rows = cur.fetchall()
+
+            cur.execute("SELECT setup_id, r_parameter_id, usecase_id FROM setup_r_relation;")
+            existing_r_keys = set(cur.fetchall())
+
+            insert_setup_r_data = []
+            old_r_id_to_new_r_id = {}  # mapping old id -> new id
+            for old_r in setup_r_rows:
+                old_id, old_setup_id, r_param_id, usecase_id = old_r
+                for (_, new_setup_id) in new_prj_setup_rows:
+                    new_key = (new_setup_id, r_param_id, usecase_id)
+                    if new_key in existing_r_keys:
+                        continue
+                    insert_setup_r_data.append((next_r_id, new_setup_id, r_param_id, usecase_id))
+                    old_r_id_to_new_r_id[old_id] = next_r_id
+                    next_r_id += 1
+
+            if insert_setup_r_data:
+                execute_values(cur, """
+                    INSERT INTO setup_r_relation (id, setup_id, r_parameter_id, usecase_id)
+                    VALUES %s;
+                """, insert_setup_r_data)
+
+            # ----------------- Clone setup_l_relation -----------------
+            cur.execute("""
+                SELECT id, setup_id, l_parameter_id, usecase_id
+                FROM setup_l_relation
+                WHERE setup_id = ANY(%s);
+            """, (old_setup_ids,))
+            setup_l_rows = cur.fetchall()
+
+            cur.execute("SELECT setup_id, l_parameter_id, usecase_id FROM setup_l_relation;")
+            existing_l_keys = set(cur.fetchall())
+
+            cur.execute("SELECT MAX(id) FROM setup_l_relation;")
+            next_l_id = (cur.fetchone()[0] or 0) + 1
+
+            insert_setup_l_data = []
+            old_l_id_to_new_l_id = {}  # mapping old id -> new id
+            for old_l in setup_l_rows:
+                old_id, old_setup_id, l_param_id, usecase_id = old_l
+                for (_, new_setup_id) in new_prj_setup_rows:
+                    new_key = (new_setup_id, l_param_id, usecase_id)
+                    if new_key in existing_l_keys:
+                        continue
+                    insert_setup_l_data.append((next_l_id, new_setup_id, l_param_id, usecase_id))
+                    old_l_id_to_new_l_id[old_id] = next_l_id
+                    next_l_id += 1
+
+            if insert_setup_l_data:
+                execute_values(cur, """
+                    INSERT INTO setup_l_relation (id, setup_id, l_parameter_id, usecase_id)
+                    VALUES %s;
+                """, insert_setup_l_data)
+
+            # ----------------- Clone rfl -----------------
+            project_ids = [int(info['project_id']) for info in prj_info_list]
+            phase_ids = [int(info['phase_id']) for info in prj_info_list]
+
+            cur.execute("""
+                SELECT id, requirement_s_id, function_id, logic_s_id, index,
+                    requirement_condition, function_condition, logic_condition,
+                    is_to, to_pattern, wp_id
+                FROM rfl
+                WHERE id IN (
+                    SELECT rfl_id
+                    FROM prj_rfl
+                    WHERE project_info_id = ANY(%s)
+                    AND phase_id = ANY(%s)
+                );
+            """, (list(project_ids), list(phase_ids)))
+            rfl_rows = cur.fetchall()
+
+            cur.execute("SELECT MAX(id) FROM rfl;")
+            next_rfl_id = (cur.fetchone()[0] or 0) + 1
+            print('next rfl id: ', next_rfl_id)
+
+            new_rfl_rows = []
+            old_rfl_to_new_rfl = {}  # old rfl id -> new rfl id
+            for row in rfl_rows:
+                old_id, old_r_s_id, function_id, old_l_s_id, index_val, \
+                    req_cond, func_cond, logic_cond, is_to, to_pattern, wp_id = row
+
+                new_r_s_id = old_r_id_to_new_r_id.get(old_r_s_id)
+                new_l_s_id = old_l_id_to_new_l_id.get(old_l_s_id)
+
+                if new_r_s_id is None or new_l_s_id is None:
+                    continue
+
+                new_rfl_rows.append((
+                    next_rfl_id, new_r_s_id, function_id, new_l_s_id, index_val,
+                    req_cond, func_cond, logic_cond, is_to, to_pattern, wp_id
+                ))
+                old_rfl_to_new_rfl[old_id] = next_rfl_id
+                next_rfl_id += 1
+
+            if new_rfl_rows:
+                execute_values(cur, """
+                    INSERT INTO rfl (
+                        id, requirement_s_id, function_id, logic_s_id, index,
+                        requirement_condition, function_condition, logic_condition,
+                        is_to, to_pattern, wp_id
+                    ) VALUES %s;
+                """, new_rfl_rows)
+
+            # ----------------- Clone prj_rfl -----------------
+            conditions_rfl = [(int(info['project_id']), int(info['phase_id'])) for info in prj_info_list]
+            where_clause_rfl = self._build_in_clause(cur, conditions_rfl, fields=2)
+
+            cur.execute(f"""
+                SELECT project_info_id, rfl_id, phase_id, requirement, function, logic,
+                    note, flag_to, to_solving_value, flag_display_on_summary_logic,
+                    sender_judge, sender_name, sender_date, sender_comment,
+                    receiver_judge, receiver_name, receiver_date, receiver_comment
+                FROM prj_rfl
+                WHERE (project_info_id, phase_id) IN ({where_clause_rfl});
+            """)
+            prj_rfl_rows = cur.fetchall()
+
+            cur.execute("SELECT project_info_id, rfl_id, phase_id FROM prj_rfl;")
+            existing_prj_rfl_keys = set(cur.fetchall())
+
+            insert_prj_rfl_data = []
+            for new_project_id in new_prj_ids:
+                for new_phase_id in new_selected_phase_ids:
+                    for row in prj_rfl_rows:
+                        old_rfl_id = row[1]
+                        new_rfl_id = old_rfl_to_new_rfl.get(old_rfl_id)
+                        if not new_rfl_id:
+                            continue
+
+                        key = (new_project_id, new_rfl_id, new_phase_id)
+                        if key in existing_prj_rfl_keys:
+                            continue
+
+                        insert_prj_rfl_data.append((
+                            new_project_id, new_rfl_id, new_phase_id,
+                            row[3], row[4], '',  # clear logic & note
+                            row[7], None, 0,
+                            None, None, None, None, None, None, None, None
+                        ))
+
+            if insert_prj_rfl_data:
+                execute_values(cur, """
+                    INSERT INTO prj_rfl (
+                        project_info_id, rfl_id, phase_id, requirement, function, logic,
+                        note, flag_to, to_solving_value, flag_display_on_summary_logic,
+                        sender_judge, sender_name, sender_date, sender_comment,
+                        receiver_judge, receiver_name, receiver_date, receiver_comment
+                    ) VALUES %s;
+                """, insert_prj_rfl_data)
+
+            # ----------------- Clone l_r_relation -----------------
+            cur.execute("SELECT MAX(id) FROM l_r_relation;")
+            next_l_r_id = (cur.fetchone()[0] or 0) + 1
+            print('next lr id: ', next_l_r_id)
+
+            cur.execute("""
+                SELECT id, r_s_id, l_s_id
+                FROM l_r_relation
+            """)
+            old_l_r_rows = cur.fetchall()
+
+            insert_l_r_data = []
+            for old_row in old_l_r_rows:
+                old_id, old_r_s_id, old_l_s_id = old_row
+                # find new r_s_id and l_s_id from old_rfl_to_new_rfl mapping
+                new_r_s_id = old_r_id_to_new_r_id.get(old_r_s_id)
+                new_l_s_id = old_l_id_to_new_l_id.get(old_l_s_id)
+                if new_r_s_id and new_l_s_id:
+                    insert_l_r_data.append((next_l_r_id, new_r_s_id, new_l_s_id))
+                    next_l_r_id += 1
+
+            if insert_l_r_data:
+                execute_values(cur, """
+                    INSERT INTO l_r_relation (id, r_s_id, l_s_id)
+                    VALUES %s;
+                """, insert_l_r_data)
+
+            self.conn.commit()
+            return True
+
+        except Exception as e:
+            self.conn.rollback()
+            print("Error:", e)
+            return False
+
+        finally:
+            cur.close()
+
+
+    # ==================================================================================
+    # Main method: Clone RFL (Requirement-Function-Logic) data to new projects
+    # ==================================================================================
+    # Purpose: Copy all RFL mapping data from base projects to new target projects
+    #          RFL represents the relationship between Requirements, Functions, and Logic
+    # Process Flow:
+    #   1. Find target project IDs based on filter criteria
+    #   2. Get existing RFL data from base projects (filtered by project and phase)
+    #   3. Clone RFL records to new projects (avoid duplicates)
+    #   4. Commit changes to database
+    # Parameters:
+    #   - prj_info_list: Base project information (source data to copy from)
+    #                    Expected to have 'r_pj_id' and 'phase_id' fields
+    #   - new_prjs: Target project codes to copy data to
+    #   - new_destinations: Target destinations
+    #   - new_drive_systems: Target drive systems
+    #   - new_lots: Target lots
+    # Returns: True if successful, False if failed
+    # ==================================================================================
+    def insert_new_rfl_project(self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots):
+        cur = self.conn.cursor()
+        try:
+            # Get new project IDs that match the filter criteria
+            new_prj_ids = [row[0] for row in self._fetch_new_project_ids(cur, new_prjs, new_destinations, new_drive_systems, new_lots)]
+            
+            # Convert input to standardized format
+            prj_info_list = self._convert_to_records(prj_info_list)
+            
+            # Validate we have data to work with
+            if not prj_info_list or not new_prj_ids:
+                print("No new projects found matching the criteria.")
+                return False
+
+            # Build condition tuples for filtering base project data
+            # Note: RFL uses only 2 fields (project_info_id, phase_id) for filtering
+            conditions = [(int(info['r_pj_id']), int(info['phase_id'])) for info in prj_info_list]
+            where_clause = self._build_in_clause(cur, conditions, fields=2)
+
+            # Fetch all RFL rows from base projects
+            # RFL contains:
+            #   - requirement: Requirement description
+            #   - function: Function description
+            #   - logic: Logic description
+            #   - note: Additional notes
+            #   - flag_to/to_solving_value: TO (Target Objective) related fields
+            #   - sender/receiver fields: Approval workflow information
+            cur.execute(f"""
+                SELECT project_info_id, rfl_id, phase_id, requirement, function, logic,
+                       note, flag_to, to_solving_value, flag_display_on_summary_logic,
+                       sender_judge, sender_name, sender_date, sender_comment,
+                       receiver_judge, receiver_name, receiver_date, receiver_comment
+                FROM prj_rfl
+                WHERE (project_info_id, phase_id) IN ({where_clause});
+            """)
+            existing_rows = cur.fetchall()
+            
+            # Check if we found any data to clone
+            if not existing_rows:
+                print("No data to process.")
+                return False
+
+            # Get existing keys from ALL RFL records to avoid duplicates
+            # Key is (project_info_id, rfl_id, phase_id)
+            cur.execute("SELECT project_info_id, rfl_id, phase_id FROM prj_rfl;")
+            existing_keys = set(cur.fetchall())
+
+            # Prepare RFL data for bulk insert
+            insert_data = []
+            for new_project_id in new_prj_ids:
+                for row in existing_rows:
+                    # Create unique key: (project_info_id, rfl_id, phase_id)
+                    key = (new_project_id, row[1], row[2])
+                    if key in existing_keys:
+                        continue  # Skip if already exists
+                    # Add new project_id with all other fields from existing row
+                    # row[1:] contains all fields except project_info_id
+                    insert_data.append((new_project_id, *row[1:]))
+
+            # Bulk insert RFL rows (execute_values is efficient for inserting multiple rows at once)
+            if insert_data:
+                execute_values(cur, """
+                    INSERT INTO prj_rfl (
+                        project_info_id, rfl_id, phase_id, requirement, function, logic,
+                        note, flag_to, to_solving_value, flag_display_on_summary_logic,
+                        sender_judge, sender_name, sender_date, sender_comment,
+                        receiver_judge, receiver_name, receiver_date, receiver_comment
+                    ) VALUES %s;
+                """, insert_data)
+
+            # Commit all changes to database
+            self.conn.commit()
+            return True
+
+        except Exception as e:
+            # Rollback all changes if any error occurs
+            self.conn.rollback()
+            print(f"Error: {e}")
+            raise
+        finally:
+            # Always close the cursor
+            cur.close()
+
+
+    # def insert_new_sim_project(self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots):
+    #         cur = self.conn.cursor()
+    #         try:
+    #             # Get new project IDs that match the filter criteria
+    #             new_prj_ids = [row[0] for row in self._fetch_new_project_ids(cur, new_prjs, new_destinations, new_drive_systems, new_lots)]
+                
+    #             # Convert input to standardized format
+    #             prj_info_list = self._convert_to_records(prj_info_list)
+                
+    #             # Validate we have data to work with
+    #             if not prj_info_list or not new_prj_ids:
+    #                 print("No new projects found matching the criteria.")
+    #                 return False
+
+    #             # Build condition tuples for filtering base project data
+    #             conditions = [(int(info['project_id']), int(info['phase_id']), int(info['variation_id'])) for info in prj_info_list]
+    #             where_clause = self._build_in_clause(cur, conditions, fields=2)
+
+    #             cur.execute(f"""
+    #                 SELECT project_id, senario_parameter_id, phase_id, variation_id, study_id, updated_value, surid, id
+    #                 FROM test_project_senario_parameter
+    #                 WHERE (project_info_id, phase_id, variation_id) IN ({where_clause});
+    #             """)
+    #             existing_rows = cur.fetchall()
+                
+    #             # Check if we found any data to clone
+    #             if not existing_rows:
+    #                 print("No data to process.")
+    #                 return False
+
+    #             # Get existing keys from ALL RFL records to avoid duplicates
+    #             # Key is (project_info_id, rfl_id, phase_id)
+    #             cur.execute("SELECT project_id, senario_parameter_id, phase_id, variation_id, study_id FROM test_project_senario_parameter;")
+    #             existing_keys = set(cur.fetchall())
+
+    #             # Prepare RFL data for bulk insert
+    #             insert_data = []
+    #             for new_project_id in new_prj_ids:
+    #                 for row in existing_rows:
+    #                     # Create unique key: (project_info_id, rfl_id, phase_id)
+    #                     key = (new_project_id, row[1], row[2], row[3], row[4])
+    #                     if key in existing_keys:
+    #                         continue  # Skip if already exists
+    #                     # Add new project_id with all other fields from existing row
+    #                     # row[1:] contains all fields except project_info_id
+    #                     insert_data.append((new_project_id, *row[1:]))
+
+    #             # Bulk insert RFL rows (execute_values is efficient for inserting multiple rows at once)
+    #             if insert_data:
+    #                 execute_values(cur, """
+    #                     INSERT INTO test_project_senario_parameter (
+    #                         project_id, senario_parameter_id, phase_id, variation_id, study_id, updated_value, surid, id
+    #                     ) VALUES %s;
+    #                 """, insert_data)
+
+    #             # Commit all changes to database
+    #             self.conn.commit()
+    #             return True
+
+    #         except Exception as e:
+    #             # Rollback all changes if any error occurs
+    #             self.conn.rollback()
+    #             print(f"Error: {e}")
+    #             raise
+    #         finally:
+    #             # Always close the cursor
+    #             cur.close()
+
+        # ==================================================================================
+    # Main method: Clone Simulation Scenario parameters to new projects
+    # ==================================================================================
+    # Purpose: Copy all simulation scenario parameter data from base projects to new target projects
+    #          This includes test scenario parameters with study configurations and updated values
+    # Process Flow:
+    #   1. Find target project IDs based on filter criteria
+    #   2. Get existing simulation scenario parameter data from base projects
+    #   3. Check for duplicates to avoid conflicts
+    #   4. Bulk insert into test_project_senario_parameter table
+    # Parameters:
+    #   - prj_info_list: Base project information (source data to copy from)
+    #   - new_prjs: Target project codes to copy data to
+    #   - new_destinations: Target destinations
+    #   - new_drive_systems: Target drive systems
+    #   - new_lots: Target lots
+    # Returns: True if successful, False if failed
+    # ==================================================================================
+    def insert_new_sim_project(self, prj_info_list, new_prjs, new_destinations, new_drive_systems, new_lots):
+        cur = self.conn.cursor()
+        try:
+            # Fetch new project IDs based on filter criteria
+            new_prj_ids = [row[0] for row in self._fetch_new_project_ids(
+                cur, new_prjs, new_destinations, new_drive_systems, new_lots
+            )]
+
+            # Convert input to list of dictionaries if it's a DataFrame
+            prj_info_list = self._convert_to_records(prj_info_list)
+
+            # Validate we have data to work with
+            if not prj_info_list or not new_prj_ids:
+                print("No new projects found matching the criteria.")
+                return False
+
+            # Build condition tuples for filtering base project data
+            # This table uses (project_id, phase_id, variation_id) as composite key
+            conditions = [
+                (int(info['project_id']), int(info['phase_id']), int(info['variation_id']))
+                for info in prj_info_list
+            ]
+            where_clause = self._build_in_clause(cur, conditions, fields=3)
+
+            # Fetch all simulation scenario parameter rows from base projects
+            # These rows contain test scenario configurations with study IDs and updated values
+            cur.execute(f"""
+                SELECT project_id, senario_parameter_id, phase_id, variation_id,
+                    study_id, updated_value, surid, id
+                FROM test_project_senario_parameter
+                WHERE (project_id, phase_id, variation_id) IN ({where_clause});
+            """)
+            existing_rows = cur.fetchall()
+
+            # Check if we found any data to clone
+            if not existing_rows:
+                print("No data to process.")
+                return False
+
+            # Fetch all existing keys to avoid duplicate inserts
+            # Key is (project_id, senario_parameter_id, phase_id, variation_id, study_id)
+            cur.execute("""
+                SELECT project_id, senario_parameter_id, phase_id, variation_id, study_id
+                FROM test_project_senario_parameter;
+            """)
+            existing_keys = set(cur.fetchall())
+
+            
+            cur.execute("SELECT MAX(surid) FROM test_project_senario_parameter;")
+            max_surid = cur.fetchone()[0] or 0
+
+            print('max surid: ', max_surid)
+
+            # Prepare data for bulk insert
+            insert_data = []
+            for new_project_id in new_prj_ids:
+                for row in existing_rows:
+                    # Create unique key with 5 fields including study_id
+                    key = (new_project_id, row[1], row[2], row[3], row[4])
+                    if key in existing_keys:
+                        continue  # Skip if this combination already exists
+                    
+                    max_surid += 1
+                    new_id = f"sim{max_surid}"
+
+                    insert_data.append((
+                        new_project_id,  # project_id
+                        row[1],          # senario_parameter_id
+                        row[2],          # phase_id
+                        row[3],          # variation_id
+                        row[4],          # study_id
+                        row[5],          # updated_value
+                        max_surid,       # surid
+                        new_id           # id
+                    ))
+                    # Add new project_id with all other fields from existing row
+                    # insert_data.append((new_project_id, *row[1:]))
+
+            # Bulk insert new simulation scenario parameter rows
+            if insert_data:
+                execute_values(cur, """
+                    INSERT INTO test_project_senario_parameter (
+                        project_id, senario_parameter_id, phase_id, variation_id,
+                        study_id, updated_value, surid, id
+                    ) VALUES %s;
+                """, insert_data)
+
+            # Commit transaction to save all changes
+            self.conn.commit()
+            return True
+
+        except Exception as e:
+            # Rollback all changes if any error occurs
+            self.conn.rollback()
+            print(f"Error: {e}")
+            raise
+
+        finally:
+            # Always close the cursor
+            cur.close()
+
+
     def all_phase_to_create_new_project(self):
         connection = self.conn
         query = f"""select id,phase from phase order by id;"""
         phase_list = pd.read_sql_query(query, connection)
 
-        # print('phase result: ', phase_list)
+        print('phase result: ', phase_list)
         return phase_list
-
-
-
-
-
-
-
-
-
-
-
-    

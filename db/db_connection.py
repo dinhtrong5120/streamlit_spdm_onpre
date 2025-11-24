@@ -39,12 +39,12 @@ class DBConnection:
             # )            
             # return connection
             connection = psycopg2.connect(
-                dbname="SPDM_2",
+                dbname="SPDM_5",
                 user="postgres",
                 password="SQL123456",
                 host="localhost",
-                port="5432"
-            )              
+                port="5433"
+            )
             return connection
         except OperationalError as e:
             raise RuntimeError("DB接続に失敗しました") from e
