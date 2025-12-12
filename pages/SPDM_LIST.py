@@ -555,37 +555,37 @@ if st.session_state.button_edit_state and not st.session_state.login_begin:
         
         if 'compare_click' not in st.session_state:
             st.session_state['compare_click'] = False
-        # col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([10,1,1,1,1,1,1,1])
-        # with col1:
-        #     title_tab_bar()     #タブメニュー表示関数を呼び出す  
-        # with col2:
-        #     create_button()   
-        # with col3:
-        #     condition_button()  #条件ボタン表示関数を呼び出す
-        # with col4:
-        #     compare_button()    #比較ボタン表示関数を呼び出す #11/25
-        # with col5:
-        #     update_button()     #編集ボタン表示関数を呼び出す
-        # with col6:
-        #     reload_button()     #リロードボタン示関数を呼び出す
-        # with col7:
-        #     map_button()        #MAPボタン表示関数を呼び出す
-        # with col8:
-        #     login_button()      #ログインボタン表示関数を呼び出す
-
-        col1, col2, col3, col4, col5, col6 = st.columns([10,1.5,1.5,1,1,1.5])
+        col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([10,1,1,1,1,1,1,1])
         with col1:
-            title_tab_bar()     #タブメニュー表示関数を呼び出す  
+            title_tab_bar()     #タブメニュー表示関数を呼び出す
         with col2:
-            condition_button()  #条件ボタン表示関数を呼び出す
+            create_button()
         with col3:
-            create_new_button()    #PRJ新規作成ボタンの関数を呼び出す #11/25
+            condition_button()  #条件ボタン表示関数を呼び出す
         with col4:
-            update_button()     #編集ボタン表示関数を呼び出す        
-        with col5:
-            map_button()        #MAP示関数を呼び出す
-        with col6:
             compare_button()    #比較ボタン表示関数を呼び出す #11/25
+        with col5:
+            update_button()     #編集ボタン表示関数を呼び出す
+        with col6:
+            reload_button()     #リロードボタン示関数を呼び出す
+        with col7:
+            map_button()        #MAPボタン表示関数を呼び出す
+        with col8:
+            login_button()      #ログインボタン表示関数を呼び出す
+
+        # col1, col2, col3, col4, col5, col6 = st.columns([10,1.5,1.5,1,1,1.5])
+        # with col1:
+        #     title_tab_bar()     #タブメニュー表示関数を呼び出す
+        # with col2:
+        #     condition_button()  #条件ボタン表示関数を呼び出す
+        # with col3:
+        #     create_new_button()    #PRJ新規作成ボタンの関数を呼び出す #11/25
+        # with col4:
+        #     update_button()     #編集ボタン表示関数を呼び出す
+        # with col5:
+        #     map_button()        #MAP示関数を呼び出す
+        # with col6:
+        #     compare_button()    #比較ボタン表示関数を呼び出す #11/25
 
     elif int(st.session_state['chosen_id']) == 2 and "r_prj_info_list" in st.session_state:# 山口 Rリスト用表示ボタン 1/29
 
@@ -1158,27 +1158,27 @@ def hide_rows_based_on_pages(df_sim, pages):
     return df_sim 
 
 
-def get_runner_status():
-    '''
-    SystemAnalysのステータスを取得する関数
-    '''
-    onedriveDirectory = r"C:\Users\BSN00147\OneDrive - Nissan Motor Corporation\simrequest_variables"
-    status_file_path = os.path.join(onedriveDirectory, 'runner_status.txt')
-    try:
-        with open(status_file_path, 'r') as f:
-            lines = f.readlines()
-            
-            status = lines[0].replace('\n', '')
-            if status==str(0):
-                return 'シミュレーション指示待機中'
-            elif status == str(1):
-                study_id = lines[1].split(',')[3]
-                return 'シミュレーション実行中：'+study_id
-            else:
-                return 'unexpected status'
-
-    except Exception as e:
-        raise e
+# def get_runner_status():
+#     '''
+#     SystemAnalysのステータスを取得する関数
+#     '''
+#     onedriveDirectory = r"C:\Users\BSN00147\OneDrive - Nissan Motor Corporation\simrequest_variables"
+#     status_file_path = os.path.join(onedriveDirectory, 'runner_status.txt')
+#     try:
+#         with open(status_file_path, 'r') as f:
+#             lines = f.readlines()
+#
+#             status = lines[0].replace('\n', '')
+#             if status==str(0):
+#                 return 'シミュレーション指示待機中'
+#             elif status == str(1):
+#                 study_id = lines[1].split(',')[3]
+#                 return 'シミュレーション実行中：'+study_id
+#             else:
+#                 return 'unexpected status'
+#
+#     except Exception as e:
+#         raise e
 
 
 #SEリスト以外のタブを選択すると何も表示されない。　＃チョー　11/01
@@ -1222,7 +1222,8 @@ if int(st.session_state['chosen_id'])  == 3 :
             with simcol1:
                 pages = st.radio('',['sim','初期仕様', 'バリエーション表','最終仕様'])#st.session_state.sim_prj_info_list
             with simcol3:
-                st.write('runner_status:\n' + get_runner_status())
+                # st.write('runner_status:\n' + get_runner_status())
+                st.write('runner_status:\n')
             go = gop.create_gridopsim(pages)#山口　pagesによって返すグリッドを切り替える
             def render_aggrid(go):
                 edit=AgGrid(

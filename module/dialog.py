@@ -2590,105 +2590,105 @@ def create_select_boxes(archi_list, col_count):
 #             else:
 #                 st.error("全ての項目を選択してください。")
 
-# def create_phase_dia1():
-#     # if 'create_option1' not in st.session_state:
-#     #     st.session_state['create_option1'] = []
+def create_phase_dia1():
+    # if 'create_option1' not in st.session_state:
+    #     st.session_state['create_option1'] = []
     
-#     architecture_list = sql.get_project("architecture_name")
-#     selected_archi = st.selectbox(
-#         'PTシステムタイプ',
-#         architecture_list,
-#         key ='select_archi_unique_key1'
-#     )
+    architecture_list = sql.get_project("architecture_name")
+    selected_archi = st.selectbox(
+        'PTシステムタイプ',
+        architecture_list,
+        key ='select_archi_unique_key1'
+    )
 
-#     z_model_code = sql.get_project("z_model_code",[selected_archi])
+    z_model_code = sql.get_project("z_model_code",[selected_archi])
 
-#     # Use the previously selected value if it exists
-#     create_option1 = st.selectbox("プロジェクト", z_model_code, key=f"create_opt1")
+    # Use the previously selected value if it exists
+    create_option1 = st.selectbox("プロジェクト", z_model_code, key=f"create_opt1")
 
-#     destination = sql.get_project("destination",[create_option1])
+    destination = sql.get_project("destination",[create_option1])
 
-#     create_option2 = st.selectbox("仕向け", destination, key=f"create_opt2")
+    create_option2 = st.selectbox("仕向け", destination, key=f"create_opt2")
 
-#     drive_system = sql.get_project("drive_system",[create_option1],[create_option2])
-#     create_option3 = st.selectbox("駆動方式", drive_system, key=f"create_opt3")
+    drive_system = sql.get_project("drive_system",[create_option1],[create_option2])
+    create_option3 = st.selectbox("駆動方式", drive_system, key=f"create_opt3")
 
-#     if create_option3 is not None:
+    if create_option3 is not None:
         
-#         project_lot = sql.get_project("project_lot",[create_option1],[create_option2],[create_option3])
-#         create_option4 = st.selectbox("ロット", project_lot, key=f"create_opt4")
+        project_lot = sql.get_project("project_lot",[create_option1],[create_option2],[create_option3])
+        create_option4 = st.selectbox("ロット", project_lot, key=f"create_opt4")
     
-#         create_phase_list = sql.get_project("phase_list",[create_option1],[create_option2],[create_option3],[create_option4])
+        create_phase_list = sql.get_project("phase_list",[create_option1],[create_option2],[create_option3],[create_option4])
 
-#         all_phase_list = sql.get_all_phase(create_phase_list, "NOT")
+        all_phase_list = sql.get_all_phase(create_phase_list, "NOT")
 
-#         create_option5_before = st_free_text_select(
-#             label="フェーズ",
-#             options=all_phase_list,
-#             delay=300,
-#             index=0
-#         )
-#         if st.button("次へ"):
-#             st.session_state.phase_click = False
-#             st.session_state.next_click = True
-#             phase_id, is_new_phase = sql.get_phase_id(create_option5_before)
+        create_option5_before = st_free_text_select(
+            label="フェーズ",
+            options=all_phase_list,
+            delay=300,
+            index=0
+        )
+        if st.button("次へ"):
+            st.session_state.phase_click = False
+            st.session_state.next_click = True
+            phase_id, is_new_phase = sql.get_phase_id(create_option5_before)
 
-#             if 'new_phase_id' not in st.session_state:
-#                 st.session_state['new_phase_id'] = 0
-#             st.session_state.new_phase_id = phase_id[0]
-#             if 'new_phase_value' not in st.session_state:
-#                     st.session_state['new_phase_value'] = []
-#             if 'is_new_phase' not in st.session_state:
-#                 st.session_state['is_new_phase'] = False
-#             st.session_state.new_phase_value = create_option5_before
-#             if is_new_phase is True:
-#                 st.session_state.is_new_phase = True
+            if 'new_phase_id' not in st.session_state:
+                st.session_state['new_phase_id'] = 0
+            st.session_state.new_phase_id = phase_id[0]
+            if 'new_phase_value' not in st.session_state:
+                    st.session_state['new_phase_value'] = []
+            if 'is_new_phase' not in st.session_state:
+                st.session_state['is_new_phase'] = False
+            st.session_state.new_phase_value = create_option5_before
+            if is_new_phase is True:
+                st.session_state.is_new_phase = True
             
-#             st.rerun()
+            st.rerun()
 
-# def create_phase_dia2():
+def create_phase_dia2():
 
-#     architecture_list = sql.get_project("architecture_name")
-#     selected_archi = st.selectbox(
-#         'PTシステムタイプ',
-#         architecture_list,
-#         key ='select_archi_unique_key2'
-#     )
+    architecture_list = sql.get_project("architecture_name")
+    selected_archi = st.selectbox(
+        'PTシステムタイプ',
+        architecture_list,
+        key ='select_archi_unique_key2'
+    )
 
-#     z_model_code2 = sql.get_project("z_model_code",[selected_archi])
+    z_model_code2 = sql.get_project("z_model_code",[selected_archi])
 
-#     create_option21 = st.selectbox("プロジェクト", z_model_code2, key=f"create_opt21")
+    create_option21 = st.selectbox("プロジェクト", z_model_code2, key=f"create_opt21")
 
-#     destination2 = sql.get_project("destination",[create_option21])
-#     create_option22 = st.selectbox("仕向け", destination2, key=f"create_opt22")
+    destination2 = sql.get_project("destination",[create_option21])
+    create_option22 = st.selectbox("仕向け", destination2, key=f"create_opt22")
 
-#     drive_system2 = sql.get_project("drive_system",[create_option21],[create_option22])
-#     create_option23 = st.selectbox("駆動方式", drive_system2, key=f"create_opt23")
+    drive_system2 = sql.get_project("drive_system",[create_option21],[create_option22])
+    create_option23 = st.selectbox("駆動方式", drive_system2, key=f"create_opt23")
     
-#     if create_option23 is not None:
+    if create_option23 is not None:
 
-#         project_lot2 = sql.get_project("project_lot",[create_option21],[create_option22],[create_option23])
-#         create_option24 = st.selectbox("ロット", project_lot2, key=f"create_opt24")   
+        project_lot2 = sql.get_project("project_lot",[create_option21],[create_option22],[create_option23])
+        create_option24 = st.selectbox("ロット", project_lot2, key=f"create_opt24")
 
-#         create_phase_list2 = sql.get_project("phase_list",[create_option21],[create_option22],[create_option23],[create_option24])
-#         all_phase_list2 = sql.get_all_phase(create_phase_list2, "ALL")
+        create_phase_list2 = sql.get_project("phase_list",[create_option21],[create_option22],[create_option23],[create_option24])
+        all_phase_list2 = sql.get_all_phase(create_phase_list2, "ALL")
         
-#         create_option5_after = st.selectbox("フェーズ", create_phase_list2, key=f"create_opt25")
-#         if st.button("作成"):
-#             st.session_state.next_click = False
-#             st.session_state.create_click = True
-#             stuck =sql.posgre_copy_data([create_option21],[create_option22],[create_option23],[create_option24],[create_option5_after])
+        create_option5_after = st.selectbox("フェーズ", create_phase_list2, key=f"create_opt25")
+        if st.button("作成"):
+            st.session_state.next_click = False
+            st.session_state.create_click = True
+            stuck =sql.posgre_copy_data([create_option21],[create_option22],[create_option23],[create_option24],[create_option5_after])
 
-#             stuck['phase_id'] = st.session_state.new_phase_id
+            stuck['phase_id'] = st.session_state.new_phase_id
 
-#             if 'is_new_phase' not in st.session_state or st.session_state['is_new_phase'] is False:   
-#                 sql.insert_project_parameters(stuck)
+            if 'is_new_phase' not in st.session_state or st.session_state['is_new_phase'] is False:
+                sql.insert_project_parameters(stuck)
 
-#             elif st.session_state['is_new_phase'] is True: 
-#                 phase_inserted = sql.insert_phase(st.session_state.new_phase_id,st.session_state.new_phase_value) 
-#                 if phase_inserted is True:
-#                     sql.insert_project_parameters(stuck)
-#             st.rerun()
+            elif st.session_state['is_new_phase'] is True:
+                phase_inserted = sql.insert_phase(st.session_state.new_phase_id,st.session_state.new_phase_value)
+                if phase_inserted is True:
+                    sql.insert_project_parameters(stuck)
+            st.rerun()
 
 
 #Kyaw #CompareSE Upd 08/22

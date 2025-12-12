@@ -18,11 +18,11 @@ class psql_class:
     def create_connection(self):
         try:
             connection = psycopg2.connect(
-                dbname = "SPDM_2",
+                dbname = "SPDM_5",
                 user = "postgres",
                 password = "SQL123456",
                 host = "localhost",
-                port = "5432"
+                port = "5433"
             )
             
             return connection
