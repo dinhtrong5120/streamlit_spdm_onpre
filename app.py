@@ -81,5 +81,20 @@ def main():
                     st.session_state.error = False
                     st.switch_page("pages/アクセス権付与依頼.py")       
 
+def main1():
+    username = "KNT21617"
+    password = "KNT21617"
+    user = sql.get_user(username)
+    st.session_state.username = username
+    st.session_state.password = password
+    if user == username and username == password:  # 山口　パスワード＝社員番号とした条件追加　12/16
+        st.session_state.error = False
+        if username == co.user:
+            st.session_state.button_edit_state = False
+        else:
+            st.session_state.button_edit_state = True
+        sql.set_login_log(username)  # 山口　ログイン日時を記録
+        st.session_state.login_begin = True  # チョー　ログインした後の初期表示
+        st.switch_page("pages/SPDM_LIST.py")
 if __name__ == "__main__":
-    main()
+    main1()

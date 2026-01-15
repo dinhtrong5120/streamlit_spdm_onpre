@@ -1,447 +1,10 @@
+from turtle import width
 import streamlit as st
 import re
 from typing import Tuple
 from st_aggrid import JsCode
 from config.config import RFLGridConfig
-
-# def create_gridop():
-#     #チョー　#11/25
-#     st.session_state['grid_field'] = [None] * len(st.session_state.prj_info_list)
-#     for i, row in st.session_state.prj_info_list.iterrows(): 
-#         prj_number = row['z_prj_number']
-#         scene = row['modified_string']
-#         field = row['z_wp_name_get_str']
-#         pe = row['z_class_name_get_str'][0] + row['z_class_name_get_str'][-1]
-#         phase = row['z_class_name_get_str']
-#         st.session_state['grid_field'][i] = prj_number + ';z_request_median;' +pe+ field
-    
-#     header_stuck = st.session_state['grid_field']
-#     if 'compare_click' not in st.session_state:
-#         st.session_state['compare_click'] = False
-   
-#     BGcolorRenderer = JsCode(f"""
-#     function (params) {{
-#         console.log("params data: ", params.data);
-#         const compare_btn_clicked = {str(st.session_state['compare_click']).lower()};
-#         if (params.data === undefined) {{
-#             return {{
-#                 'background-color': '#C0C0C0',
-#                 'wordBreak': 'normal',
-#                 'whiteSpace': 'pre-line'
-#             }};
-#         }} else if (params.value === null) {{
-#             return {{
-#                 'background-color': '#EFEFEF',
-#                 'wordBreak': 'normal',
-#                 'whiteSpace': 'pre-line'
-#             }};                         
-#         }} else if (compare_btn_clicked) {{
-#             // Convert header_stuck to a JavaScript array
-#             const headerStuck = {header_stuck};  
-#             const headerStuckLength = headerStuck.length;  // Get the length of header_stuck
-
-#             const valueA = params.data[headerStuck[0]];  // Access the first header value
-
-#             // let occurrenceCount = 0;
-#             // Loop through the header_stuck array starting from index 1
-#             for (let i = 1; i < headerStuckLength; i++) {{
-#                 const valueB = params.data[headerStuck[i]];  // Access each subsequent header value
-#                 // Check if the values are not equal
-#                 if (valueA !== undefined && valueB !== undefined && valueA !== valueB) {{
-#                     return {{
-#                         'background-color': '#ffcccc',
-#                         'wordBreak': 'normal',
-#                         'whiteSpace': 'pre-line'
-#                     }};
-#                 }}
-#             }}
-#         }}              
-#         return null; // Default style
-#     }}
-#     """)#山口加筆
-#     ChangeHighlight = JsCode(
-#         """
-#     function(e) {
-#         let api = e.api;
-#         let rowIndex = e.rowIndex;
-#         let col = e.column.colId;
-        
-#         console.log(e);
-#         let rowNode = api.getDisplayedRowAtIndex(rowIndex);
-#         api.flashCells({
-#           rowNodes: [rowNode],
-#           columns: [col],
-#           flashDelay: 10000000000
-#         });
-
-#     };
-#     """
-#     )
-#     # test=JsCode("""
-#     # class CustomTooltip {
-#     #     eGui;
-
-#     # init(params) {
-#     #     const eGui = (this.eGui = document.createElement('div'));
-#     #     const tooltipField = params.colDef.tooltipField;
-#     #     // 取得したデータに「test」という文字列を結合して、eGuiのテキスト内容に設定します。
-#     #     const originalText = params.data[tooltipField];
-#     #     const truncatedText = originalText.slice(0, 10); // 最初の10文字を取得
-#     #     this.eGui.innerText = "更新日: " + truncatedText;        
-#     #     eGui.style['background-color'] = 'white'; // バックグラウンドカラーを白に設定
-#     #     eGui.style['color'] = 'black'; // 文字色を黒に設定
-#     #     eGui.style['padding'] = '10px'; // パディングを設定
-#     #     eGui.style['font-size'] = '16px'; // 文字サイズを少し大きく設定
-#     #     eGui.style['border-radius'] = '10px'; // 角を丸くする
-#     #     eGui.style['border'] = '1px solid black'; // 枠線を追加
-#     #     eGui.style['box-shadow'] = '0px 0px 10px rgba(0, 0, 0, 0.1)';
-#     # }
-
-#     # getGui() {
-#     #     return this.eGui;
-#     # }
-#     # }
-#     # """)
-
-#     edit_state = st.session_state.button_edit_state
-#     PJLOTjoho = {"z_name":"フェーズ","z_class_name_get_str":"ロット","z_drive_system":"駆動方式", "z_destination":"仕向け", "project_code":"プロジェクト",} #チョー　11/06 山口 ロットとフェーズの順番を入れ替えた　11/7
-#     # tooltip_joho = {"z_vehicle_type": "車種", "lot_name": "ロット"}#,"z_class_name_get_str":"階層"}
-#     # PJLOTjoho = {
-#     #     k: v for k, v in PJLOTjoho.items()
-#     #     if k in set([
-#     #         k2 for prj in st.session_state.prj_info for k2 in prj.keys()
-#     #         if prj[k2] != ''
-#     #     ])
-#     # }
-#     # col_scene = [
-#     #     col
-#     #     for col in st.session_state.se_data_stuck.columns
-#     #     if ';z_wp_name_get_str' in col
-#     # ]
-
-#     # col_scene = list(set(col_scene))
-#     # val_scene = [
-#     #     tuple(col.split(';')) if len(col.split(';'))>2
-#     #     else tuple(col.split(';') +  [''])
-#     #     for col in col_scene
-#     # ]
-#     # def extract_number(s: str) -> Tuple[bool, int]:
-#     #     """ 文字列から数字を抽出し、その数値と、数字があったかどうかのフラグを返す """
-#     #     match = re.search(r'\d+', s)
-#     #     if match:
-#     #         return (True, int(match.group(0)))
-#     #     return (False, float('inf'))  # 数字がない場合は無限大を返す
-#     # # ソートの実行
-#     # val_scene = sorted(val_scene, key=lambda x: (x[0], extract_number(x[2]), x[2]))
-    
-    
-#     go = {
-#         'defaultColDef': {
-#             'flex':1,
-#             'resizable': True,
-#             'wrapHeaderText': True,
-#             'suppressMovable': True,
-#             'allowDragFromColumnsToolPanel': True,
-#             'filter': True,
-#         },
-#         'autoGroupColumnDef': {
-#             'headerName': 'パラメータ名',
-#             'pinned': 'left',
-#             'width': 350,
-#             'wrapText': True,
-#             'headerClass': 'title_green'
-#         },
-#         'columnDefs': [],
-#         'treeData': True,
-#         'pagination': False,#山口　ページ折り返しが不便なので無効か7/30
-#         'groupDefaultExpanded': -1,
-#         'rowSelection': 'multiple',
-#         'suppressRowClickSelection': True,
-#         'groupSelectsChildren': True,
-#         'enableRangeSelection':True,
-#         'enableBrowserTooltips':True,#山口
-#         'onCellValueChanged':ChangeHighlight,#山口 11/4 値が変わったセルのハイライト
-#         'suppressMultiRangeSelection':True,
-#         # 'domLayout':'autoHeight',
-#         'sideBar': {
-#             'toolPanels': [
-#             {
-#                 'id': 'columns',
-#                 'labelDefault': 'Columns',
-#                 'labelKey': 'columns',
-#                 'iconKey': 'columns',
-#                 'toolPanel': 'agColumnsToolPanel',
-#                 'toolPanelParams': {
-#                 'suppressRowGroups': True,
-#                 'suppressValues': True,
-#                 'suppressPivots': True,
-#                 'suppressPivotMode': True,
-#                 'suppressColumnFilter': True,
-#                 'suppressColumnSelectAll': True,
-#                 'suppressColumnExpandAll': True,
-#                 },
-#             },
-#             ],
-#         },
-#     }
-#     # 単位列のデフォルトオプション
-#     prj_info_list = st.session_state.prj_info_list
-#     prj = prj_info_list.iloc[0]['z_prj_number']
-#     sce = prj_info_list.iloc[0]['z_wp_name_get_str']
-#     unit = prj_info_list.iloc[0]['z_class_name_get_str'][0] + prj_info_list.iloc[0]['z_class_name_get_str'][-1]
-#     go_add = {
-#         'field': prj+';z_unit_copy;'+unit+sce, 'headerName': '単位',
-#         'pinned': 'left', 'filter': True, 'width': 110,
-#         'headerClass': 'title_green'
-#     }
-#     for v in PJLOTjoho.values():
-#         go_add = {
-#             'headerName': v,
-#             'headerClass': 'group_title_green',
-#             'children': [
-#                 go_add
-#             ]
-#         }
-    
-#     go['columnDefs'].append(go_add)
-#     # パラメータ値列のデフォルトオプション
-#     go_scene = []
-#     go_phase = []
-#     # go_add = {}
-#     _prj_number = ''
-#     _phase = ''
-#     # info_list_count = 0
-#     header_coler = 'green'
-#     header_group_coler = 'group_green'
-#     # prj = st.session_state.prj_info[info_list_count]
-#     # for prj_number, _, scene in val_scene:
-#     row_count = len(prj_info_list)
-#     for i, row in prj_info_list.iterrows(): 
-#         # プロジェクトが切り替わったら、前回までのシーンをGridOptionへ追加
-#         prj_number = row['z_prj_number']
-#         scene = row['modified_string']
-#         field = row['z_wp_name_get_str']
-#         pe = row['z_class_name_get_str'][0] + row['z_class_name_get_str'][-1]#山口 列名にくっつけたふぇーずようそ11/6
-#         phase = row['z_class_name_get_str']
-#         # print(f'{prj_number} and {pe} and {field}')  
-#         #チョー 11/25
-#         st.session_state['grid_field'][i] = prj_number + ';z_request_median;' +pe+ field
-
-#         cell_style = BGcolorRenderer  # Default style
-#         if(
-#             (
-#                 prj_info_list.iloc[i]['project_id'] == 6 and
-#                 prj_info_list.iloc[i]['phase_id'] == 7 and
-#                 prj_info_list.iloc[i]['z_name'] == 'Pre-Pro' and
-#                 prj_info_list.iloc[i]['z_destination'] == 'JPN' and
-#                 prj_info_list.iloc[i]['z_drive_system'] == '2WD'
-#             )
-#             and st.session_state['compare_click'] is False
-#         ):
-#             edit_state = False
-#             st.session_state.se_data_stuck[prj_number + ';selected;' +pe+ field] = None
-#             cell_style = {'background-color': '#F5F5F5', 'wordBreak': 'normal', 'whiteSpace': 'pre-line'} 
-#         elif st.session_state['compare_click'] is True:
-#             edit_state = False
-#         else:
-#             st.session_state.se_data_stuck[prj_number + ';selected;' +pe+ field] = False
-#             edit_state = st.session_state.button_edit_state
-#         #中間確認会#1をロックする #チョー　04/14
-#         if prj_info_list.iloc[i]['project_id'] == 14 and prj_info_list.iloc[i]['phase_id'] == 15:
-#             edit_state = False
-
-#         #st.markdown(prj_number + scene + field)#山口デバック用
-#         col_detail = "ロット:" + row['z_name'] + " フェーズ:" + row['z_class_name_get_str'] #チョー　11/01　フェーズと車種→ロットとフェーズ
-#         if prj_number != _prj_number or i == row_count:# and _prj_number != '':山口編集、実行条件に最終行であることを追加
-#             #st.markdown("first if passed")
-#             #col_detail = ''#山口　用途不明のためコメントアウト
-#             # for k, v in reversed(tooltip_joho.items()):
-#             #     col_detail += str(v) + ':' + str(prj[k]) + '    '
-#             if _prj_number != '':
-#                 #st.markdown("second if passed")
-#                 go_phase.append({
-#                     'headerName': _row['z_class_name_get_str'],
-#                     'headerClass': header_group_coler,
-#                     'children': go_scene
-#                 })
-#                 go_add = {'headerName': _row['z_name'], 'headerClass': header_group_coler, 'children':go_phase } #チョー　11/06
-#                 for k, v in PJLOTjoho.items():
-#                     if k!= 'z_name' and k != 'z_class_name_get_str': #チョー　11/06
-#                         #st.markdown("third if passed")
-#                         go_add = {
-#                             'headerName': _row[k],
-#                             'headerClass': header_group_coler,
-#                             'children': [go_add]
-#                         }
-#                 go['columnDefs'].append(go_add)
-#                 # info_list_count =+ 1
-#                 # prj = st.session_state.prj_info[info_list_count]
-#                 go_scene = []
-#                 go_phase = []
-#                 go_add = {}
-#                 if header_coler == 'darkgreen':
-#                     #st.markdown("forth if passed")
-#                     header_coler = 'green'
-#                     header_group_coler = 'group_green'
-#                 elif header_coler == 'green':
-#                     header_coler = 'darkgreen'
-#                     header_group_coler = 'group_darkgreen'
-#         _row = row#山口編集　Prj変わったタイミングで前の行のPrj情報を参照するためストックしておく
-#         _field = field
-#         _pe = pe
-#         if prj_number == _prj_number and phase != _phase:
-#             go_phase.append({
-#                 'headerName': _phase,
-#                 'headerClass': header_group_coler,
-#                 'children': go_scene
-#             })
-#             go_scene = []
-#         go_scene.append({ #山口　選択列の追加 10/25
-#             'field': prj_number + ';selected;' +pe+ field,#山口　フェーズ要素くっつけた 11/6
-#             'headerName': '編集',
-#             'suppressMovable': True,
-#             'wrapText': True,
-#             'minWidth': 40,
-#             'maxWidth': 40,
-#             'editable': edit_state,
-#             'cellStyle': cell_style,
-#             'headerTooltip': col_detail,
-#             'tooltipField':prj_number + ';edited_info;' +pe+ field,#山口　フェーズ要素くっつけた 11/6
-#             'cellRenderer': 'agCheckboxCellRenderer',
-#             # 'tooltipComponent': test,
-#             'headerClass': header_coler,
-#             'tooltipShowDelay': 0
-#         }
-#          )
-                      
-#         go_scene.append({
-#             'field': prj_number + ';z_request_median;' +pe+ field,#山口　フェーズ要素くっつけた 11/6
-#             'headerName': scene,
-#             'suppressMovable': True,
-#             'wrapText': True,
-#             'minWidth': 70,
-#             'editable': edit_state,
-#             'cellStyle': cell_style,
-#             'headerTooltip': col_detail,
-#             'tooltipField':prj_number + ';edited_info;' +pe+ field,#山口　フェーズ要素くっつけた 11/6
-#             # 'tooltipComponent': test,
-#             'headerClass': header_coler,
-#             'tooltipShowDelay': 0
-#         }
-#          )
-#         go_scene.append({#山口　ステータスも外に出したいという追加要望10/28
-#             'field': prj_number + ';state_name;' +pe+ field,#山口　フェーズ要素くっつけた 11/6
-#             'headerName': 'ステータス',#山口　れつめいかえた
-#             'suppressMovable': True,
-#             'wrapText': True,
-#             'minWidth': 130,
-#             'editable':edit_state,
-#             "cellEditor":'agSelectCellEditor',
-#             "cellEditorParams":{
-#                 "values": ['0.机上設計値(フィジカルデータ無し)', '1.設計値(一部フィジカルデータ含む机上検討値)', '2.設計値(フィジカルデータ)', "3.スペック", '4.名称', '5.対象外', ' ']# 山口　設定書き換え 3/27書き換え
-#             },
-#             'cellStyle': cell_style,
-#             'headerTooltip': col_detail,
-#             'tooltipField':prj_number + ';edited_info;' +pe+ field,#山口　フェーズ要素くっつけた 11/6
-#             # 'tooltipComponent': test,
-#             'headerClass': header_coler,
-#             'tooltipShowDelay': 0,
-#             'hide': True
-#         }
-#          )
-#         go_scene.append({ #山口　メモ列の追加 10/30
-#             'field': prj_number + ';user_memo;' +pe+ field,#山口　フェーズ要素くっつけた 11/6
-#             'headerName': 'メモ',
-#             'suppressMovable': True,
-#             'wrapText': True,
-#             'minWidth': 100,
-#             'editable': edit_state,
-#             'cellStyle': cell_style,
-#             'headerTooltip': col_detail,
-#             'tooltipField':prj_number + ';edited_info;' +pe+ field,#山口　フェーズ要素くっつけた 11/6
-#             # 'tooltipComponent': test,
-#             'headerClass': header_coler,
-#             'tooltipShowDelay': 0,
-#             'hide': True
-#         }
-#          )
-#         go_scene.append({
-#             'field': prj_number + ';z_note;' +pe+ field,  #10/23 #課題リスト＃23番 山口　フェーズ情報足りていなかったため追加　11/7 各行へ担当者列を追加するため移動11/7
-#             'headerName': '担当者',
-#             'suppressMovable': True,
-#             'wrapText': True,
-#             'minWidth': 100,
-#             'editable': edit_state,
-#             'cellStyle': cell_style,        
-#             'headerTooltip': col_detail,
-#             'headerClass': header_coler,
-#             'tooltipShowDelay': 0,
-#             'hide': True
-#         })
-#         _prj_number = prj_number
-#         _phase = phase
-#         #st.markdown(go)#山口デバック用
-
-#     # go['columnDefs'] += [{'headerName': prj['z_model_code'], 'headerClass': header_group_coler, 'children':go_prj }]
-#     # go_scene.append({　#山口　各行追加するため不要になった11/7
-#     #     'field': prj_number + ';z_note;' +pe+ field,#山口　フェーズ要素くっつけた 11/6
-#     #     'headerName': '担当者',
-#     #     'suppressMovable': True,
-#     #     'wrapText': True,
-#     #     'minWidth': 100,
-#     #     'editable': True,
-#     #     'cellStyle': BGcolorRenderer,        
-#     #     'headerTooltip': col_detail,
-#     #     'headerClass': header_coler,
-#     #     'tooltipShowDelay': 0
-#     # })
-
-#     if len(prj_info_list)>1 and st.session_state['compare_click'] is True:
-#         prj_compare1 = prj_info_list.iloc[0]['z_prj_number']
-#         prj_compare2 = prj_info_list.iloc[1]['z_prj_number']
-        
-#         fi1= prj_info_list.iloc[0]['z_wp_name_get_str']
-#         fi2 = prj_info_list.iloc[1]['z_wp_name_get_str']
-#         pi1 = prj_info_list.iloc[0]['z_class_name_get_str'][0] + prj_info_list.iloc[0]['z_class_name_get_str'][-1]
-#         pi2 = prj_info_list.iloc[1]['z_class_name_get_str'][0] + prj_info_list.iloc[1]['z_class_name_get_str'][-1]
-#         key1 = f'{prj_compare1};z_request_median;{pi1}{fi1}'
-#         key2 = f'{prj_compare2};z_request_median;{pi2}{fi2}'
-#         data_stuck_first = st.session_state.se_data_stuck[key1]
-#         data_stuck_second = st.session_state.se_data_stuck[key2]
-
-#         for k in range(len(data_stuck_first)):
-#             first_value = data_stuck_first.iloc[k]
-#             compare_value = data_stuck_second.iloc[k]
-#             # Compare values for cell styling
-#             if first_value != compare_value:
-#                 st.session_state.se_data_stuck.loc[k, f'{prj_compare1};selected;{pi1}{fi1}'] = False
-#                 st.session_state.se_data_stuck.loc[k, f'{prj_compare2};selected;{pi2}{fi2}'] = False
-#             else:
-#                 st.session_state.se_data_stuck.loc[k, f'{prj_compare1};selected;{pi1}{fi1}'] = None
-#                 st.session_state.se_data_stuck.loc[k, f'{prj_compare2};selected;{pi2}{fi2}'] = None
-
-#     go_phase.append({
-#         'headerName': row['z_class_name_get_str'],
-#         'headerClass': header_group_coler,
-#         'children': go_scene
-#     })
-#     go_add = {'headerName': row['z_name'], 'headerClass': header_group_coler, 'children':go_phase } #チョー　11/06
-#     for k, v in PJLOTjoho.items():
-#         if k != 'z_name' and k != 'z_class_name_get_str': #チョー　11/06
-#             go_add = {
-#                 'headerName': row[k],
-#                 'headerClass': header_group_coler,
-#                 'children': [go_add]
-#             }
-#     go['columnDefs'].append(go_add)
-#     go['getDataPath'] = JsCode('''
-#                 function(data) {
-#                     return data.params0p;
-#                 }
-                
-#             ''').js_code
-#     return go
-
+from db.rfl_repository import RFLRepository
 
 def create_gridop():
     #チョー　#11/25
@@ -451,22 +14,57 @@ def create_gridop():
         scene = row['modified_string']
         # field = row['z_wp_name_get_str']
         # pe = row['z_class_name_get_str'][0] + row['z_class_name_get_str'][-1]
+        field = str(row['variation_id']) #10/29 merge#3 merge#4
+        pe = str(row['phase_id']) #10/29 merge#3 merge#4
         phase = row['z_class_name_get_str']
-        field = row['variation_id']
-        pe = row['phase_id']
-        st.session_state['grid_field'][i] = prj_number + ';z_request_median;' +str(pe)+ str(field)
-
-        # print('pj num: ', prj_number)
-        # print('scene: ',scene)
-        # print('field: ', field)
-        # print('pe: ', pe)
-        # print('phase: ', phase)
+        st.session_state['grid_field'][i] = prj_number + ';z_request_median;' +pe+ field
     
     header_stuck = st.session_state['grid_field']
-    print('header stuck: ', header_stuck)
     if 'compare_click' not in st.session_state:
         st.session_state['compare_click'] = False
    
+    # BGcolorRenderer = JsCode(f"""
+    # function (params) {{
+    #     console.log("params data: ", params.data);
+    #     const compare_btn_clicked = {str(st.session_state['compare_click']).lower()};
+    #     if (params.data === undefined) {{
+    #         return {{
+    #             'background-color': '#C0C0C0',
+    #             'wordBreak': 'normal',
+    #             'whiteSpace': 'pre-line'
+    #         }};
+    #     }} else if (params.value === null) {{
+    #         return {{
+    #             'background-color': '#EFEFEF',
+    #             'wordBreak': 'normal',
+    #             'whiteSpace': 'pre-line'
+    #         }};                         
+    #     }} else if (compare_btn_clicked) {{
+    #         // Convert header_stuck to a JavaScript array
+    #         const headerStuck = {header_stuck};  
+    #         const headerStuckLength = headerStuck.length;  // Get the length of header_stuck
+
+    #         const valueA = params.data[headerStuck[0]];  // Access the first header value
+
+    #         // let occurrenceCount = 0;
+    #         // Loop through the header_stuck array starting from index 1
+    #         for (let i = 1; i < headerStuckLength; i++) {{
+    #             const valueB = params.data[headerStuck[i]];  // Access each subsequent header value
+    #             // Check if the values are not equal
+    #             if (valueA !== undefined && valueB !== undefined && valueA !== valueB) {{
+    #                 return {{
+    #                     'background-color': '#ffcccc',
+    #                     'wordBreak': 'normal',
+    #                     'whiteSpace': 'pre-line'
+    #                 }};
+    #             }}
+    #         }}
+    #     }}              
+    #     return null; // Default style
+    # }}
+    # """)#山口加筆
+
+    #Kyaw #CompareSE Upd #10/29 merge#3 merge#4
     BGcolorRenderer = JsCode(f"""
     function (params) {{
         console.log("params data: ", params.data);
@@ -477,7 +75,7 @@ def create_gridop():
                 'wordBreak': 'normal',
                 'whiteSpace': 'pre-line'
             }};
-        }} else if (params.value === null) {{
+        }} else if (params.value === null || params.value === '') {{
             return {{
                 'background-color': '#EFEFEF',
                 'wordBreak': 'normal',
@@ -486,16 +84,13 @@ def create_gridop():
         }} else if (compare_btn_clicked) {{
             // Convert header_stuck to a JavaScript array
             const headerStuck = {header_stuck};  
-            const headerStuckLength = headerStuck.length;  // Get the length of header_stuck
-
-            const valueA = params.data[headerStuck[0]];  // Access the first header value
-
-            // let occurrenceCount = 0;
-            // Loop through the header_stuck array starting from index 1
-            for (let i = 1; i < headerStuckLength; i++) {{
-                const valueB = params.data[headerStuck[i]];  // Access each subsequent header value
-                // Check if the values are not equal
-                if (valueA !== undefined && valueB !== undefined && valueA !== valueB) {{
+            const valueA = params.data[headerStuck[0]];
+            const currentField = params.colDef.field;
+            const idx = headerStuck.indexOf(currentField);
+            // Only compare if this is one of the columns in headerStuck (and not the first one)
+            if (idx > 0) {{
+                const valueB = params.data[currentField];
+                if (valueA !== undefined && valueB !== undefined && valueA !== null && valueB !== null && valueA !== '' && valueB !== '' && valueA !== valueB) {{
                     return {{
                         'background-color': '#ffcccc',
                         'wordBreak': 'normal',
@@ -506,7 +101,9 @@ def create_gridop():
         }}              
         return null; // Default style
     }}
-    """)#山口加筆
+    """)
+
+
     ChangeHighlight = JsCode(
         """
     function(e) {
@@ -635,13 +232,13 @@ def create_gridop():
     # 単位列のデフォルトオプション
     prj_info_list = st.session_state.prj_info_list
     prj = prj_info_list.iloc[0]['z_prj_number']
-    sce = prj_info_list.iloc[0]['z_wp_name_get_str']
-    unit = prj_info_list.iloc[0]['z_class_name_get_str'][0] + prj_info_list.iloc[0]['z_class_name_get_str'][-1]
-    field = prj_info_list.iloc[0]['variation_id']
-    pe = prj_info_list.iloc[0]['phase_id']
-
+    ph_id = str(prj_info_list.iloc[0]['phase_id'])
+    var_id = str(prj_info_list.iloc[0]['variation_id'])
+    # sce = prj_info_list.iloc[0]['z_wp_name_get_str']
+    # unit = prj_info_list.iloc[0]['z_class_name_get_str'][0] + prj_info_list.iloc[0]['z_class_name_get_str'][-1]
     go_add = {
-        'field': prj+';z_unit_copy;'+str(pe)+ str(field), 'headerName': '単位',
+        # 'field': prj+';z_unit_copy;'+unit+sce, 'headerName': '単位',
+        'field': prj+';z_unit_copy;'+ph_id+var_id, 'headerName': '単位',
         'pinned': 'left', 'filter': True, 'width': 110,
         'headerClass': 'title_green'
     }
@@ -829,6 +426,21 @@ def create_gridop():
             'tooltipShowDelay': 0,
             'hide': True
         })
+        if st.session_state['compare_click'] is True: #Kyaw #CompareSE Upd #10/29 merge#3 merge#4
+            go_scene.append({
+                'field': prj_number + ';compared_result;' +str(pe)+ str(field),  
+                'headerName': '比較結果',
+                'suppressMovable': True,
+                'wrapText': True,
+                'minWidth': 100,
+                'maxWidth':130,
+                'editable': edit_state,
+                'cellStyle': cell_style,        
+                'headerTooltip': col_detail,
+                'headerClass': header_coler,
+                'tooltipShowDelay': 0,
+                # 'hide': True
+            })
         _prj_number = prj_number
         _phase = phase
         #st.markdown(go)#山口デバック用
@@ -847,33 +459,99 @@ def create_gridop():
     #     'tooltipShowDelay': 0
     # })
 
+    # if len(prj_info_list)>1 and st.session_state['compare_click'] is True:
+    #     prj_compare1 = prj_info_list.iloc[0]['z_prj_number']
+    #     prj_compare2 = prj_info_list.iloc[1]['z_prj_number']
+        
+    #     fi1= prj_info_list.iloc[0]['z_wp_name_get_str']
+    #     fi2 = prj_info_list.iloc[1]['z_wp_name_get_str']
+    #     pi1 = prj_info_list.iloc[0]['z_class_name_get_str'][0] + prj_info_list.iloc[0]['z_class_name_get_str'][-1]
+    #     pi2 = prj_info_list.iloc[1]['z_class_name_get_str'][0] + prj_info_list.iloc[1]['z_class_name_get_str'][-1]
+    #     key1 = f'{prj_compare1};z_request_median;{pi1}{fi1}'
+    #     key2 = f'{prj_compare2};z_request_median;{pi2}{fi2}'
+    #     data_stuck_first = st.session_state.se_data_stuck[key1]
+    #     data_stuck_second = st.session_state.se_data_stuck[key2]
+
+    #     for k in range(len(data_stuck_first)):
+    #         first_value = data_stuck_first.iloc[k]
+    #         compare_value = data_stuck_second.iloc[k]
+    #         # Compare values for cell styling
+    #         if first_value != compare_value:
+    #             st.session_state.se_data_stuck.loc[k, f'{prj_compare1};selected;{pi1}{fi1}'] = False
+    #             st.session_state.se_data_stuck.loc[k, f'{prj_compare2};selected;{pi2}{fi2}'] = False
+    #         else:
+    #             st.session_state.se_data_stuck.loc[k, f'{prj_compare1};selected;{pi1}{fi1}'] = None
+    #             st.session_state.se_data_stuck.loc[k, f'{prj_compare2};selected;{pi2}{fi2}'] = None
+
+    #10/29 merge#3 merge#4
     if len(prj_info_list)>1 and st.session_state['compare_click'] is True:
-        prj_compare1 = prj_info_list.iloc[0]['z_prj_number']
-        prj_compare2 = prj_info_list.iloc[1]['z_prj_number']
-        fi1 = str(prj_info_list.iloc[0]['variation_id'])
-        fi2 = str(prj_info_list.iloc[1]['variation_id'])
-        pi1 = str(prj_info_list.iloc[0]['phase_id'])
-        pi2 = str(prj_info_list.iloc[1]['phase_id'])
-        # fi1= prj_info_list.iloc[0]['z_wp_name_get_str']
-        # fi2 = prj_info_list.iloc[1]['z_wp_name_get_str']
-        # pi1 = prj_info_list.iloc[0]['z_class_name_get_str'][0] + prj_info_list.iloc[0]['z_class_name_get_str'][-1]
-        # pi2 = prj_info_list.iloc[1]['z_class_name_get_str'][0] + prj_info_list.iloc[1]['z_class_name_get_str'][-1]
+        num_projects = len(prj_info_list)
+        for k in range(len(st.session_state.se_data_stuck)):  # for each row
+            for j in range(1, num_projects):
+                prj_compare1 = prj_info_list.iloc[0]['z_prj_number']
+                prj_compare2 = prj_info_list.iloc[j]['z_prj_number']
+                fi1 = str(prj_info_list.iloc[0]['variation_id'])
+                fi2 = str(prj_info_list.iloc[j]['variation_id'])
+                pi1 = str(prj_info_list.iloc[0]['phase_id'])
+                pi2 = str(prj_info_list.iloc[j]['phase_id'])
+                key1 = f'{prj_compare1};z_request_median;{pi1}{fi1}'
+                key2 = f'{prj_compare2};z_request_median;{pi2}{fi2}'
+                data_stuck_first = st.session_state.se_data_stuck[key1]
+                data_stuck_second = st.session_state.se_data_stuck[key2]
 
-        key1 = f'{prj_compare1};z_request_median;{pi1}{fi1}'
-        key2 = f'{prj_compare2};z_request_median;{pi2}{fi2}'
-        data_stuck_first = st.session_state.se_data_stuck[key1]
-        data_stuck_second = st.session_state.se_data_stuck[key2]
+                first_value = data_stuck_first.iloc[k]
+                compare_value = data_stuck_second.iloc[k]
 
-        for k in range(len(data_stuck_first)):
-            first_value = data_stuck_first.iloc[k]
-            compare_value = data_stuck_second.iloc[k]
-            # Compare values for cell styling
-            if first_value != compare_value:
-                st.session_state.se_data_stuck.loc[k, f'{prj_compare1};selected;{pi1}{fi1}'] = False
-                st.session_state.se_data_stuck.loc[k, f'{prj_compare2};selected;{pi2}{fi2}'] = False
+                # ❶ Both not empty
+                if (first_value is not None and first_value != '') and (compare_value is not None and compare_value != ''):
+                    if first_value != compare_value:
+                        st.session_state.se_data_stuck.loc[k, f'{prj_compare1};compared_result;{pi1}{fi1}'] = '！'
+                        st.session_state.se_data_stuck.loc[k, f'{prj_compare2};compared_result;{pi2}{fi2}'] = '！'
+                    else:
+                        st.session_state.se_data_stuck.loc[k, f'{prj_compare2};compared_result;{pi2}{fi2}'] = ''
+
+                # ❷ Both empty
+                elif (first_value is None or first_value == '') and (compare_value is None or compare_value == ''):
+                    st.session_state.se_data_stuck.loc[k, f'{prj_compare1};compared_result;{pi1}{fi1}'] = 'N/A'
+                    st.session_state.se_data_stuck.loc[k, f'{prj_compare2};compared_result;{pi2}{fi2}'] = 'N/A'
+
+                # ❸ prj1 not empty, prj2 empty
+                elif (first_value is not None and first_value != '') and (compare_value is None or compare_value == ''):
+                    # Only set prj2 to 比較不可, prj1 will be set after all comparisons
+                    st.session_state.se_data_stuck.loc[k, f'{prj_compare2};compared_result;{pi2}{fi2}'] = 'N/A'
+
+                # ❹ prj1 empty, prj2 not empty
+                elif (first_value is None or first_value == '') and (compare_value is not None and compare_value != ''):
+                    st.session_state.se_data_stuck.loc[k, f'{prj_compare1};compared_result;{pi1}{fi1}'] = 'N/A'
+                    st.session_state.se_data_stuck.loc[k, f'{prj_compare2};compared_result;{pi2}{fi2}'] = 'N/A'
+
+            # After all pairwise comparisons for this row, set prj1's compared_result for ❸
+            prj_compare1 = prj_info_list.iloc[0]['z_prj_number']
+            fi1 = str(prj_info_list.iloc[0]['variation_id'])
+            pi1 = str(prj_info_list.iloc[0]['phase_id'])
+            key1 = f'{prj_compare1};compared_result;{pi1}{fi1}'
+            # Collect all compared_results for this row for prj1, except 比較不可 from empty comparisons
+            results = []
+            for j in range(1, num_projects):
+                prj_compare2 = prj_info_list.iloc[j]['z_prj_number']
+                fi2 = str(prj_info_list.iloc[j]['variation_id'])
+                pi2 = str(prj_info_list.iloc[j]['phase_id'])
+                key2 = f'{prj_compare2};compared_result;{pi2}{fi2}'
+                val = st.session_state.se_data_stuck.loc[k, key2]
+                if val != 'N/A':
+                    results.append(val)
+            # Decide prj1's compared_result
+            if not results:
+                # All were 比較不可
+                st.session_state.se_data_stuck.loc[k, key1] = 'N/A'
+            elif any(r == '！' for r in results):
+                st.session_state.se_data_stuck.loc[k, key1] = '！'
+            elif all(r == '' for r in results):
+                st.session_state.se_data_stuck.loc[k, key1] = ''
             else:
-                st.session_state.se_data_stuck.loc[k, f'{prj_compare1};selected;{pi1}{fi1}'] = None
-                st.session_state.se_data_stuck.loc[k, f'{prj_compare2};selected;{pi2}{fi2}'] = None
+                # If there's a mix of 一致 and 不一致, treat as 不一致
+                st.session_state.se_data_stuck.loc[k, key1] = '！'
+
 
     go_phase.append({
         'headerName': row['z_class_name_get_str'],
@@ -897,8 +575,7 @@ def create_gridop():
             ''').js_code
     return go
 
-
-def create_gridopsim():#山口　sim用gridoption 12/2
+def create_gridopsim(pages):#山口　sim用gridoption 12/2
     BGcolorRenderer=JsCode("""
     function (params) {
         if (params.data === undefined) {
@@ -993,8 +670,9 @@ def create_gridopsim():#山口　sim用gridoption 12/2
     prj = sim_prj_info_list.iloc[0]['project_id']
     sce = sim_prj_info_list.iloc[0]['variation']
     unit = sim_prj_info_list.iloc[0]['phase'][0] + sim_prj_info_list.iloc[0]['phase'][-1]
+    study = sim_prj_info_list.iloc[0]['study_id']
     go_add = {
-        'field': str(prj)+';z_unit_copy;'+unit+sce, 'headerName': '単位',
+        'field': str(prj)+';parameter_unit;'+unit+sce+study, 'headerName': '単位',
         'pinned': 'left', 'filter': True, 'width': 110,
         'headerClass': 'title_green'
     }
@@ -1091,7 +769,7 @@ def create_gridopsim():#山口　sim用gridoption 12/2
             'headerName': 'SEリストの値',
             'suppressMovable': True,
             'wrapText': True,
-            'minWidth': 70,
+            'minWidth': 130,
             
             'editable': False,
             'cellStyle': BGcolorRenderer,
@@ -1102,6 +780,22 @@ def create_gridopsim():#山口　sim用gridoption 12/2
             'tooltipShowDelay': 0
             }
              )
+            go_scene.append({ 
+            'field': str(prj_number) + ';target_value;' +pe+ field+study,# 山口　目標値情報も載せたいので列追加
+            'headerName': 'Rリスト目標値',
+            'suppressMovable': True,
+            'wrapText': True,
+            'minWidth': 130,
+            
+            'editable': False,
+            'cellStyle': BGcolorRenderer,
+            'headerTooltip': col_detail,
+            'tooltipField':str(prj_number) + ';edited_info;' +pe+ field+study,#山口　フェーズ要素くっつけた 11/6
+            # 'tooltipComponent': test,
+            'headerClass': header_coler,
+            'tooltipShowDelay': 0
+            })
+             
         
         go_scene.append({ #山口　選択列の追加 10/25
             'field': str(prj_number) + ';selected;' +pe+ field+study,#山口　フェーズ要素くっつけた 11/6
@@ -1117,7 +811,7 @@ def create_gridopsim():#山口　sim用gridoption 12/2
             # 'tooltipComponent': test,
             'headerClass': header_coler,
             'tooltipShowDelay': 0,
-            'hide' : flag_hide_column
+            'hide' : flag_hide_column| (pages =='初期仕様')
         }
          )
                       
@@ -1126,7 +820,7 @@ def create_gridopsim():#山口　sim用gridoption 12/2
             'headerName': study,
             'suppressMovable': True,
             'wrapText': True,
-            'minWidth': 70,
+            'minWidth': 130,
             'editable': edit_state,
             'cellStyle': BGcolorRenderer,
             'headerTooltip': col_detail,
@@ -1134,7 +828,7 @@ def create_gridopsim():#山口　sim用gridoption 12/2
             # 'tooltipComponent': test,
             'headerClass': header_coler,
             'tooltipShowDelay': 0,
-            'hide' : flag_hide_column
+            'hide' : flag_hide_column| (pages =='初期仕様')
         }
          )
         
@@ -1143,7 +837,7 @@ def create_gridopsim():#山口　sim用gridoption 12/2
             'headerName': 'メモ',
             'suppressMovable': True,
             'wrapText': True,
-            'minWidth': 100,	
+            'minWidth': 130,	
             'editable': True,
             'cellStyle': BGcolorRenderer,
             'headerTooltip': col_detail,
@@ -2127,12 +1821,12 @@ def create_gridop_rlist():
         }
         go_add.append(project_list_dis)
         project_item_gp = []
-   
+
     #チョー　01/30　ヘッダーの厚さを調整する
     go['headerHeight'] = 40
     go['columnDefs'].extend(go_add)
 
-    #Kyaw 07/23 change the retrieved resized columns value to the grid->(minwidth and hide)
+    #Kyaw 07/23 change the retrieved resized columns value to the grid->(minwidth and hide) #10/29 merge#5
     if (
         "resize_column_result" in st.session_state
         and not st.session_state.resize_column_result.empty
@@ -2158,9 +1852,7 @@ def create_gridop_rlist():
                         if field in saved_widths:
                             child["minWidth"] = int(saved_widths[field])
                             child["hide"] = bool(saved_hides.get(field, False))  # Default to False
-
-    go["columnDefs"] = go_add
-
+    go["columnDefs"] = go_add   #11/05
     go['getDataPath'] = JsCode('''
                 function(data) {
                     return data.params0p;
@@ -2301,7 +1993,7 @@ def create_rlist_summary_grid():
     return go
 
 
-def fixed_sim():
+def fixed_sim_bk():
     grid_options = {
     "defaultColDef": {
         "filter": True,
@@ -2350,6 +2042,69 @@ def fixed_sim():
     
     }
     return grid_options
+
+
+def fixed_sim():
+    grid_options = {
+    "defaultColDef": {
+        # "filter": True,
+        # "suppressMovable": True,
+        # "autoHeaderHeight": True,
+        "flex": 1,
+        "minWidth": 80,
+        "editable": True,
+        # "resizable": True
+    },
+    "rowSelection": "multiple",
+    # "groupDisplayType": "multipleColumns",
+    "suppressRowClickSelection": True,
+    "headerHeight": 45,  # Set header row height in pixels
+    "rowHeight": 30,  # Set row height in pixels
+    
+    "columnDefs": [
+        {
+            "headerName": "",
+            "checkboxSelection": True,
+            "maxWidth":50,   
+            "headerClass": "green"
+        },
+        # {
+        #     "headerName": "領域",
+        #     "field": "performance",
+        #     'editable': False,
+        #     "headerClass": "green"
+        # },
+        # {
+        #     "headerName": "設計項目（大）",
+        #     "field": "design_item_1",
+        #     'editable': False,
+        #     "headerClass": "green"
+        # },
+        # {
+        #     "headerName": "設計項目（小）",
+        #     "field": "design_item_2",
+        #     'editable': False,
+        #     "headerClass": "green"
+        # },
+        {
+            "headerName": "スタディID",
+            "field": "study_id",
+            'editable': False,
+            "headerClass": "green",
+            "filter": True,
+        },
+        {
+            "headerName": "設計値",
+            "field": "value",
+            'editable': False,
+            "headerClass": "green",
+            "filter": True,
+        }
+    ],
+    
+    }
+    return grid_options
+
 
 def file_download_agop():
     grid_options = {
@@ -2730,7 +2485,7 @@ def make_mapop():
 # 2025/01/29 Telema RFL
 
 # カラム共通オプション
-def create_rfl_common_col(header_name,field,headerClass,filter=True,minWidth=300,editable = False, valueFormatter=None):
+def create_rfl_common_col(header_name,field,headerClass,filter=True,minWidth=300,editable = False, valueFormatter=None, cellEditorParams=None, cellStyle=None, cellRenderer=None):
     """_summary_
         共通カラムオプションを作成
     Args:
@@ -2740,6 +2495,10 @@ def create_rfl_common_col(header_name,field,headerClass,filter=True,minWidth=300
         filter (bool): _description_. Defaults to True.
         minWidth (int): _description_. Defaults to 100.
         editable (bool): 変更
+        valueFormatter (bool): 日付フォーマット用
+        cellEditorParams (dict): セルエディタのパラメータ（ドロップダウン用）
+        cellStyle (JsCode or dict): セルのスタイル設定
+        cellRenderer (JsCode or string): セルレンダラー
     Returns:
         dictionary: 基本列オプション
     """
@@ -2755,14 +2514,27 @@ def create_rfl_common_col(header_name,field,headerClass,filter=True,minWidth=300
     if valueFormatter:
         col_def['valueFormatter'] = JsCode("""
             function(params) {
-                if (!params.value) return '';
+                //return params.value ? new Date(params.value).toISOString().split('T')[0] : ''; 11/05
+                if (!params.value || params.value === null || params.value === undefined) return '';
                 const date = new Date(params.value);
+                if (isNaN(date.getTime())) return '';
                 const year = date.getFullYear();
                 const month = ('0' + (date.getMonth() + 1)).slice(-2);
                 const day = ('0' + date.getDate()).slice(-2);
                 return `${year}-${month}-${day}`;
             }
         """)
+    # ドロップダウンエディタの設定
+    if cellEditorParams:
+        col_def['cellEditor'] = 'agSelectCellEditor'
+        col_def['cellEditorParams'] = cellEditorParams
+    # セルスタイルの設定
+    if cellStyle:
+        col_def['cellStyle'] = cellStyle
+    # セルレンダラーの設定
+    if cellRenderer:
+        col_def['cellRenderer'] = cellRenderer
+
     return col_def
 
 # グループ共通オプション
@@ -2785,6 +2557,66 @@ def create_rfl_group(header_name,field,headerClass):
             'rowGroup': True,
             'hide': True,
     }
+
+# ID値に基づいてグレー背景を適用するセルスタイルを作成
+def create_id_based_cell_style(prefix):
+    """_summary_
+        ID値がNoneまたは空の場合にグレー背景を適用するセルスタイルを作成
+    Args:
+        prefix (string): 階層プレフィックス ('c_', 's_', 'u_')
+    Returns:
+        JsCode: セルスタイル関数
+    """
+    return JsCode(f"""
+    function(params) {{
+        if (params.data === undefined) {{
+            return null;
+        }}
+        const pjId = params.data['{prefix}r_pj_id'];
+        const phaseId = params.data['{prefix}ph_id'];
+        const rflId = params.data['{prefix}rfl_id'];
+        
+        // Check if any of the IDs are None or empty
+        if ((pjId === null || pjId === undefined || pjId === '') ||
+            (phaseId === null || phaseId === undefined || phaseId === '') ||
+            (rflId === null || rflId === undefined || rflId === '')) {{
+            return {{
+                'background-color': '#F5F5F5',
+                'wordBreak': 'normal',
+                'whiteSpace': 'pre-line'
+            }};
+        }}
+        return null;
+    }}
+    """)
+
+# ID値に基づいてeditableを制御する関数を作成
+def create_id_based_editable(prefix):
+    """_summary_
+        ID値がNoneまたは空の場合にeditableをfalseにする関数を作成
+    Args:
+        prefix (string): 階層プレフィックス ('c_', 's_', 'u_')
+    Returns:
+        JsCode: editable判定関数
+    """
+    return JsCode(f"""
+    function(params) {{
+        if (params.data === undefined) {{
+            return false;
+        }}
+        const pjId = params.data['{prefix}r_pj_id'];
+        const phaseId = params.data['{prefix}ph_id'];
+        const rflId = params.data['{prefix}rfl_id'];
+        
+        // Check if any of the IDs are None or empty
+        const idsMissing = (pjId === null || pjId === undefined || pjId === '') ||
+                          (phaseId === null || phaseId === undefined || phaseId === '') ||
+                          (rflId === null || rflId === undefined || rflId === '');
+        
+        // Return false (not editable) if IDs are missing, true otherwise
+        return !idsMissing;
+    }}
+    """)
 
     
 # 共通階層構造
@@ -2884,6 +2716,17 @@ def create_rfl_option(hierarchy):
     l_cols = RFLGridConfig.cols['l_cols']
     approve_cols = RFLGridConfig.cols['approve_cols']
 
+    # 単位データを取得
+    units_dict = RFLRepository.get_units_dict()
+    units_list = list(units_dict.keys())
+    
+    # r_parameterから単位データを取得（r_cols用）
+    r_parameter_units_list = RFLRepository.get_r_parameter_units_list()
+    
+    # WPデータを取得（allocation用）
+    wp_dict = RFLRepository.get_wp_dict()
+    wp_list = list(wp_dict.keys())
+
     # 階層でオプションを変更
     if hierarchy == 'car':
         prefix = 'c_'
@@ -2900,11 +2743,14 @@ def create_rfl_option(hierarchy):
         color = 'unit'          
         header_name = 'Unit'
 
+    # ID値に基づくセルスタイルを作成
+    id_based_style = create_id_based_cell_style(prefix)
+
     # 階層単位でオプションを作成
     group = {
         'headerName': header_name,
         'headerClass': color,
-        'children': [
+        'children': [  #11/05
             {
                 'headerName': 'Requirements',
                 'headerClass': 'group_req',
@@ -2912,10 +2758,12 @@ def create_rfl_option(hierarchy):
                         # create_rfl_common_col(r_cols['pj']['title'],prefix + r_cols['pj']['col'],'req'),       # relation test
                         # create_rfl_common_col(r_cols['wp']['title'],prefix + r_cols['wp']['col'],'req'),       # relation test
                         # create_rfl_common_col(r_cols['wp_id']['title'],prefix + r_cols['wp_id']['col'],'req'), # relation test
-                        create_rfl_common_col(r_cols['item']['title'],prefix + r_cols['item']['col'],'req',minWidth=140),
-                        create_rfl_common_col(r_cols['value']['title'],prefix + r_cols['value']['col'],'req',minWidth=200,editable = st.session_state.rfl_edit_state), #telema-kyaw
-                        create_rfl_common_col(r_cols['unit']['title'],prefix + r_cols['unit']['col'],'req',minWidth=100),
-                        create_rfl_common_col(r_cols['scene']['title'],prefix + r_cols['scene']['col'],'req',minWidth=400),                        
+                        create_rfl_common_col(r_cols['item']['title'],prefix + r_cols['item']['col'],'req',minWidth=140, cellStyle=id_based_style),
+                        create_rfl_common_col(r_cols['req_condition']['title'],prefix + r_cols['req_condition']['col'],'req',minWidth=130,editable = st.session_state.rfl_edit_state, cellEditorParams={'values': [None,'＞', '＜', '＝', '≧', '≦']}, cellStyle=id_based_style),
+                        create_rfl_common_col(r_cols['value']['title'],prefix + r_cols['value']['col'],'req',minWidth=200,editable = st.session_state.rfl_edit_state, cellStyle=id_based_style), #telema-kyaw
+                        create_rfl_common_col(r_cols['unit']['title'],prefix + r_cols['unit']['col'],'req',minWidth=100, cellStyle=id_based_style),
+                        # create_rfl_common_col(r_cols['unit']['title'],prefix + r_cols['unit']['col'],'req',minWidth=100,editable = st.session_state.rfl_edit_state, cellEditorParams={'values': r_parameter_units_list}),
+                        create_rfl_common_col(r_cols['scene']['title'],prefix + r_cols['scene']['col'],'req',minWidth=400, cellStyle=id_based_style),                        
                 ]
             },
             {
@@ -2923,44 +2771,44 @@ def create_rfl_option(hierarchy):
                 'headerName': 'Function',
                 'headerClass': 'group_func',
                 'children': [
-                        create_rfl_common_col(f_cols['item']['title'],prefix + f_cols['item']['col'],'func'),
-                        create_rfl_common_col(f_cols['value']['title'],prefix + f_cols['value']['col'],'func',editable = st.session_state.rfl_edit_state), #telema-kyaw
-                        create_rfl_common_col(f_cols['unit']['title'],prefix + f_cols['unit']['col'],'func',minWidth=100),                        
+                        create_rfl_common_col(f_cols['item']['title'],prefix + f_cols['item']['col'],'func', cellStyle=id_based_style),
+                        create_rfl_common_col(f_cols['value']['title'],prefix + f_cols['value']['col'],'func',editable = st.session_state.rfl_edit_state, cellStyle=id_based_style), #telema-kyaw
+                        create_rfl_common_col(f_cols['unit']['title'],prefix + f_cols['unit']['col'],'func',minWidth=100,editable = st.session_state.rfl_edit_state, cellEditorParams={'values': units_list}, cellStyle=id_based_style),                        
                 ]
             },
             {
                 'headerName': 'Logic',
                 'headerClass': 'group_logic',
                 'children': [
-                        create_rfl_common_col(l_cols['item']['title'],prefix + l_cols['item']['col'],'logic'),
-                        create_rfl_common_col(l_cols['log_condition']['title'],prefix + l_cols['log_condition']['col'],'logic',minWidth=130), 
-                        create_rfl_common_col(l_cols['value']['title'],prefix + l_cols['value']['col'],'logic',editable = st.session_state.rfl_edit_state), #telema-kyaw
-                        create_rfl_common_col(l_cols['unit']['title'],prefix + l_cols['unit']['col'],'logic',minWidth=100),                        
-                        create_rfl_common_col(l_cols['scene']['title'],prefix + l_cols['scene']['col'],'logic',minWidth=450),
-                        create_rfl_common_col(l_cols['note']['title'],prefix + l_cols['note']['col'],'logic',minWidth=400,editable = st.session_state.rfl_edit_state), #telema-kyaw
-                        create_rfl_common_col(l_cols['allocation']['title'],prefix + l_cols['allocation']['col'],'logic',minWidth=400)
+                        create_rfl_common_col(l_cols['item']['title'],prefix + l_cols['item']['col'],'logic', cellStyle=id_based_style),
+                        create_rfl_common_col(l_cols['log_condition']['title'],prefix + l_cols['log_condition']['col'],'logic',minWidth=130,editable = st.session_state.rfl_edit_state, cellEditorParams={'values': [None,'＞', '＜', '＝', '≧', '≦']}, cellStyle=id_based_style), 
+                        create_rfl_common_col(l_cols['value']['title'],prefix + l_cols['value']['col'],'logic',editable = st.session_state.rfl_edit_state, cellStyle=id_based_style), #telema-kyaw
+                        create_rfl_common_col(l_cols['unit']['title'],prefix + l_cols['unit']['col'],'logic',minWidth=100,editable = st.session_state.rfl_edit_state, cellEditorParams={'values': units_list}, cellStyle=id_based_style),                        
+                        create_rfl_common_col(l_cols['scene']['title'],prefix + l_cols['scene']['col'],'logic',minWidth=450, cellStyle=id_based_style),
+                        create_rfl_common_col(l_cols['note']['title'],prefix + l_cols['note']['col'],'logic',minWidth=400,editable = st.session_state.rfl_edit_state, cellStyle=id_based_style), #telema-kyaw
+                        create_rfl_common_col(l_cols['allocation']['title'],prefix + l_cols['allocation']['col'],'logic',minWidth=400,editable = st.session_state.rfl_edit_state, cellEditorParams={'values': wp_list}, cellStyle=id_based_style)
                 ]
             },
             {
                 'headerName': '出し手',
                 'headerClass': 'group_req',
                 'children': [
-                    create_rfl_common_col(approve_cols['sender_selected']['title'],prefix + approve_cols['sender_selected']['col'],'req',minWidth=70,editable = True),
-                    create_rfl_common_col(approve_cols['sender_judge']['title'],prefix + approve_cols['sender_judge']['col'],'req',minWidth=140,editable = st.session_state.rfl_edit_state),
-                    create_rfl_common_col(approve_cols['sender_name']['title'],prefix + approve_cols['sender_name']['col'],'req',minWidth=140,editable = st.session_state.rfl_edit_state),
-                    create_rfl_common_col(approve_cols['sender_date']['title'],prefix + approve_cols['sender_date']['col'],'req',minWidth=140,editable = st.session_state.rfl_edit_state,valueFormatter=True),
-                    create_rfl_common_col(approve_cols['sender_comment']['title'],prefix + approve_cols['sender_comment']['col'],'req',minWidth=140,editable = True),
+                    create_rfl_common_col(approve_cols['sender_selected']['title'],prefix + approve_cols['sender_selected']['col'],'req',minWidth=70,editable = create_id_based_editable(prefix), cellStyle=id_based_style, cellRenderer='agCheckboxCellRenderer'),
+                    create_rfl_common_col(approve_cols['sender_judge']['title'],prefix + approve_cols['sender_judge']['col'],'req',minWidth=140,editable = st.session_state.rfl_edit_state, cellStyle=id_based_style),
+                    create_rfl_common_col(approve_cols['sender_name']['title'],prefix + approve_cols['sender_name']['col'],'req',minWidth=140,editable = st.session_state.rfl_edit_state, cellStyle=id_based_style),
+                    create_rfl_common_col(approve_cols['sender_date']['title'],prefix + approve_cols['sender_date']['col'],'req',minWidth=140,editable = st.session_state.rfl_edit_state,valueFormatter=True, cellStyle=id_based_style),
+                    create_rfl_common_col(approve_cols['sender_comment']['title'],prefix + approve_cols['sender_comment']['col'],'req',minWidth=140,editable = True, cellStyle=id_based_style),
                 ]
             },
             {
                 'headerName': '受け手',
                 'headerClass': 'group_req',
                 'children': [
-                    create_rfl_common_col(approve_cols['receiver_selected']['title'],prefix + approve_cols['receiver_selected']['col'],'req',minWidth=70,editable = True),
-                    create_rfl_common_col(approve_cols['receiver_judge']['title'],prefix + approve_cols['receiver_judge']['col'],'req',minWidth=140,editable = st.session_state.rfl_edit_state),
-                    create_rfl_common_col(approve_cols['receiver_name']['title'],prefix + approve_cols['receiver_name']['col'],'req',minWidth=140,editable = st.session_state.rfl_edit_state),
-                    create_rfl_common_col(approve_cols['receiver_date']['title'],prefix + approve_cols['receiver_date']['col'],'req',minWidth=140,editable = st.session_state.rfl_edit_state,valueFormatter=True),
-                    create_rfl_common_col(approve_cols['receiver_comment']['title'],prefix + approve_cols['receiver_comment']['col'],'req',minWidth=140,editable = True),
+                    create_rfl_common_col(approve_cols['receiver_selected']['title'],prefix + approve_cols['receiver_selected']['col'],'req',minWidth=70,editable = create_id_based_editable(prefix), cellStyle=id_based_style, cellRenderer='agCheckboxCellRenderer'),
+                    create_rfl_common_col(approve_cols['receiver_judge']['title'],prefix + approve_cols['receiver_judge']['col'],'req',minWidth=140,editable = st.session_state.rfl_edit_state, cellStyle=id_based_style),
+                    create_rfl_common_col(approve_cols['receiver_name']['title'],prefix + approve_cols['receiver_name']['col'],'req',minWidth=140,editable = st.session_state.rfl_edit_state, cellStyle=id_based_style),
+                    create_rfl_common_col(approve_cols['receiver_date']['title'],prefix + approve_cols['receiver_date']['col'],'req',minWidth=140,editable = st.session_state.rfl_edit_state,valueFormatter=True, cellStyle=id_based_style),
+                    create_rfl_common_col(approve_cols['receiver_comment']['title'],prefix + approve_cols['receiver_comment']['col'],'req',minWidth=140,editable = True, cellStyle=id_based_style),
                 ]
             },
         ]
@@ -3016,6 +2864,7 @@ def create_gridop_rfl_list():
             'suppressMovable': True,
             'allowDragFromColumnsToolPanel': True,
             'filter': True,
+            # 'cellStyle': BGcolorRenderer,
         },
         'autoGroupColumnDef': {
             'headerName': 'PJ/性能',
@@ -3114,15 +2963,20 @@ def create_gridop_rfl_list():
     # go_add.append(system_group)
     # go_add.append(unit_group)
 
-    # 各階層列を作成     #telema-kyaw start  
-    hierarchy = st.session_state.tmp_hr
-    if hierarchy == '車両': prefix='car'
-    if hierarchy == 'システム': prefix='system'
-    if hierarchy == 'ユニット': prefix='unit'
-    group = create_rfl_option(prefix)
-    go_add.append(group)
-    #telema-kyaw end
 
+    # 各階層列を作成     #telema-kyaw start   #11/05
+    hierarchies = st.session_state.tmp_hr if isinstance(st.session_state.tmp_hr, list) else [st.session_state.tmp_hr]
+    
+    # Create columns for each hierarchy
+    for hierarchy in hierarchies:
+        if hierarchy == '車両': prefix='car'
+        elif hierarchy == 'システム': prefix='system'
+        elif hierarchy == 'ユニット': prefix='unit'
+        else:
+            continue  # Skip unknown hierarchies
+        group = create_rfl_option(prefix)
+        go_add.append(group)
+    
     go['columnDefs'].extend(go_add)
 
     go['getDataPath'] = JsCode('''
@@ -3132,6 +2986,7 @@ def create_gridop_rfl_list():
                 
             ''').js_code
     return go
+
 
 # 03/18
 def update_to_grid(grid_name):
@@ -3369,7 +3224,8 @@ def update_rfl_dashboard_grid():
 
     return grid_options
 
-#Kyaw 06/20
+
+#Kyaw 06/20  #11/05
 def update_rfl_summary_to_grid():
 
     grid_options = {
@@ -3403,8 +3259,18 @@ def update_rfl_summary_to_grid():
                 'editable': False,
             },
             {
-                "headerName": "TO判定",
+                "headerName": "仕様と割付成立性​",
                 "field": "to_pattern",
+                "minWidth": 30,
+                "editable": True,
+                "cellEditor": "agSelectCellEditor",
+                "cellEditorParams": {
+                    "values": ["TO", "TOなし","比較対象がない"]
+                },
+            },
+            {
+                "headerName": "TO判定​",
+                "field": "perf_to_pattern",
                 "minWidth": 30,
                 "editable": True,
                 "cellEditor": "agSelectCellEditor",
@@ -3414,4 +3280,140 @@ def update_rfl_summary_to_grid():
             },
         ],
     }
+    return grid_options
+
+
+
+def go_dialog_cost_info():
+
+    go = {
+        'columnDefs':[
+            {
+                'headerName':'プロジェクト',
+                'field':'project_info_str_wo_phase'
+            },
+            {
+                'headerName':'アイテム',
+                'field':'part_name',
+                #こっからした必要？？？
+                # 'editable': True,
+                # 'cellStyle':{
+                #     'background-color':'#FFFFCC'
+                # }, 
+                # 'cellEditor': 'agSelectCellEditor',
+                # 'cellEditorParams': {
+                #     'values': df_cost_item['item_name_4'].tolist()
+                #     },
+                    
+                # 'onCellValueChanged': callback_part_name
+            },
+            {
+                'headerName':'単価',
+                'field':'original_cost',
+                'editable': False,
+            },
+            {
+                'headerName':'レートID',
+                'field':'cost_rate_id'
+            },
+            {
+                'headerName':'換算レート',
+                'field':'cost_rate'
+            },
+            {
+                'headerName':'レート名',
+                'field':'cost_rate_name',
+                'editable': False,
+            },
+            {
+                'headerName':'効果',
+                'field':'parameter_change_amount',
+                'editable': False,
+
+            },
+            {
+                'headerName':'カテゴリ',
+                'field':'parameter_name',
+                'editable': False,
+            },
+        ],
+        'defaultColDef':{
+            'resizable': True,
+            'headerClass': 'cost'
+        },
+    }
+    return go
+
+#PRJ新規作成のダイアログで使うベースプロジェクト一覧のGrid
+def base_project_grid():
+    # Build column definitions list
+    column_defs = []
+    
+    # Only add checkbox column when chosen_id is not 4
+    if int(st.session_state['chosen_id']) != 4:
+        column_defs.append({
+            "headerName": "",
+            "checkboxSelection": True,
+            'headerClass': 'title_green',
+            "minWidth": 40,
+        })
+    
+    # Add all other columns
+    column_defs.extend([
+        {
+            "headerName": 'プロジェクト',
+            "field": f'project_code',
+            'headerClass': 'title_green'
+        },
+        {
+            "headerName": '仕向け',
+            "field": f'destination',
+            'headerClass': 'title_green'
+        },
+        {
+            "headerName": '駆動方式',
+            "field": f'drivetrain',
+            'headerClass': 'title_green'
+        },
+        {
+            "headerName": 'ロット',
+            "field": f'lot',
+            'headerClass': 'title_green'
+        },
+        {
+            "headerName": 'フェーズ',
+            "field": f'phase',
+            'headerClass': 'title_green'
+        },
+    ])
+    
+    grid_options = {
+        "defaultColDef": {
+            "filter": False,
+            # "suppressMovable": True,
+            # "autoHeaderHeight": True,
+            "flex": 1,
+            "minWidth": 80,
+            "editable": False,
+            # "resizable": True
+        },
+        "rowSelection": "multiple",
+        # "groupDisplayType": "multipleColumns",
+        "suppressRowClickSelection": True,
+        
+        "columnDefs": column_defs,
+    }
+
+    
+
+    if not int(st.session_state['chosen_id']) == 4:
+        go_add = []
+        variation_list = {
+            "headerName": 'バリエーション',
+            "field": f'variation',
+            'headerClass': 'title_green'
+        }
+        go_add.append(variation_list)
+        grid_options['columnDefs'].extend(go_add)
+        
     return grid_options

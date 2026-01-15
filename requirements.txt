@@ -1,5 +1,6 @@
 altair==4.2.2
 argon2-cffi @ file:///C:/Python%20Project/pip_install_file/jupyter/argon2_cffi-21.3.0-py3-none-any.whl
+argon2-cffi-bindings==25.1.0
 asttokens @ file:///C:/Python%20Project/pip_install_file/jupyter/asttokens-2.0.8-py2.py3-none-any.whl
 attrs==23.2.0
 backcall @ file:///C:/Python%20Project/pip_install_file/jupyter/backcall-0.2.0-py2.py3-none-any.whl
@@ -12,7 +13,9 @@ cffi @ file:///C:/Python%20Project/pip_install_file/jupyter/cffi-1.15.1-cp310-cp
 charset-normalizer @ file:///C:/Python%20Project/pip_install_file/requests_python/charset_normalizer-3.3.2-py3-none-any.whl
 click @ file:///C:/Python%20Project/pip_install_file/stramlit_pkg/click-8.1.7-py3-none-any.whl
 colorama==0.4.6
+colorlog==6.7.0
 comtypes==1.1.10
+contourpy==1.3.2
 cycler==0.10.0
 debugpy @ file:///C:/Python%20Project/pip_install_file/jupyter/debugpy-1.6.3-cp310-cp310-win_amd64.whl
 decorator @ file:///C:/Python%20Project/pip_install_file/jupyter/decorator-5.1.1-py3-none-any.whl
@@ -22,6 +25,7 @@ et-xmlfile==1.0.1
 executing @ file:///C:/Python%20Project/pip_install_file/jupyter/executing-1.0.0-py2.py3-none-any.whl
 extra-streamlit-components==0.1.71
 fastjsonschema @ file:///C:/Python%20Project/pip_install_file/jupyter/fastjsonschema-2.16.2-py3-none-any.whl
+fonttools==4.60.0
 gitdb==4.0.11
 GitPython==3.1.43
 google @ file:///C:/Python%20Project/pip_install_file/stramlit_pkg/google-3.0.0-py2.py3-none-any.whl
@@ -32,7 +36,7 @@ ipykernel @ file:///C:/Python%20Project/pip_install_file/jupyter/ipykernel-6.16.
 ipython @ file:///C:/Python%20Project/pip_install_file/jupyter/ipython-8.5.0-py3-none-any.whl
 ipython-genutils @ file:///C:/Python%20Project/pip_install_file/jupyter/ipython_genutils-0.2.0-py2.py3-none-any.whl
 jedi @ file:///C:/Python%20Project/pip_install_file/jupyter/jedi-0.18.1-py2.py3-none-any.whl
-Jinja2==3.1.4
+Jinja2==3.1.2
 jinja3 @ file:///C:/Python%20Project/pip_install_file/jupyter/jinja3-3.1.7-py3-none-any.whl
 jsonschema==4.23.0
 jsonschema-specifications==2023.12.1
@@ -54,7 +58,7 @@ nbformat @ file:///C:/Python%20Project/pip_install_file/jupyter/nbformat-5.6.1-p
 nest-asyncio @ file:///C:/Python%20Project/pip_install_file/jupyter/nest_asyncio-1.5.5-py3-none-any.whl
 notebook @ file:///C:/Python%20Project/pip_install_file/jupyter/notebook-6.4.12-py3-none-any.whl
 numpy==2.0.1
-openpyxl @ file:///C:/Python%20Project/pip_install_file/library/openpyxl-3.0.7-py2.py3-none-any.whl
+openpyxl==3.1.5
 packaging==24.1
 pandas==2.2.2
 pandocfilters @ file:///C:/Python%20Project/pip_install_file/jupyter/pandocfilters-1.5.0-py2.py3-none-any.whl
@@ -69,6 +73,8 @@ psutil @ file:///C:/Python%20Project/pip_install_file/jupyter/psutil-5.9.2-cp310
 psycopg2==2.9.9
 pure-eval @ file:///C:/Python%20Project/pip_install_file/jupyter/pure_eval-0.2.2-py3-none-any.whl
 pyarrow==17.0.0
+pyasn1==0.6.1
+pyasn1_modules==0.4.2
 pycparser @ file:///C:/Python%20Project/pip_install_file/jupyter/pycparser-2.21-py2.py3-none-any.whl
 pydeck==0.9.1
 Pygments==2.18.0
@@ -85,6 +91,8 @@ referencing==0.35.1
 requests==2.32.3
 rich==13.7.1
 rpds-py==0.19.1
+rsa==4.9.1
+scipy==1.15.3
 Send2Trash @ file:///C:/Python%20Project/pip_install_file/jupyter/Send2Trash-1.8.0-py3-none-any.whl
 six @ file:///C:/Python%20Project/pip_install_file/jupyter/six-1.16.0-py2.py3-none-any.whl
 smmap==5.0.1
@@ -93,6 +101,7 @@ SQLAlchemy==2.0.35
 stack-data @ file:///C:/Python%20Project/pip_install_file/jupyter/stack_data-0.5.1-py3-none-any.whl
 streamlit==1.37.0
 streamlit-aggrid==1.0.5
+streamlit-flow-component==1.5.0
 streamlit-free-text-select==0.2.0
 streamlit-js-eval==0.1.7
 streamlit_carousel==1.1.0

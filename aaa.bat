@@ -1,0 +1,1 @@
+C:\Users\BSN00147\AppData\Local\Programs\Python\Python310\python.exe -m streamlit run app.py

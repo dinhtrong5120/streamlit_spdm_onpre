@@ -5,15 +5,106 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="a7e0a43f-69f0-49f9-8c86-eb4f3e852b0c" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/spdm_app_testserver_rfl_design_0912.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/spdm_app_testserver_rfl_design_0912.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/const/constpara.py" beforeDir="false" afterPath="$PROJECT_DIR$/const/constpara.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Aras Updata/ArasUpdata.py" beforeDir="false" afterPath="$PROJECT_DIR$/Aras Updata/ArasUpdata.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Aras Updata/arasUpdata.vbs" beforeDir="false" afterPath="$PROJECT_DIR$/Aras Updata/arasUpdata.vbs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Aras Updata/パラメータ情報編集エクセル_ver18.08_数値更新用.xlsm" beforeDir="false" afterPath="$PROJECT_DIR$/Aras Updata/パラメータ情報編集エクセル_ver18.08_数値更新用.xlsm" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Aras_connect/ArasAPI.py" beforeDir="false" afterPath="$PROJECT_DIR$/Aras_connect/ArasAPI.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Aras_connect/ArasIOM.py" beforeDir="false" afterPath="$PROJECT_DIR$/Aras_connect/ArasIOM.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Aras_connect/Middle.py" beforeDir="false" afterPath="$PROJECT_DIR$/Aras_connect/Middle.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Aras_connect/util.py" beforeDir="false" afterPath="$PROJECT_DIR$/Aras_connect/util.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/config/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/css/SPDM_info.JPG" beforeDir="false" afterPath="$PROJECT_DIR$/css/SPDM_info.JPG" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/css/nissan_icon.png" beforeDir="false" afterPath="$PROJECT_DIR$/css/nissan_icon.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/css/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/css/style.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/css/style_ag.json" beforeDir="false" afterPath="$PROJECT_DIR$/css/style_ag.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/db/db_connection.py" beforeDir="false" afterPath="$PROJECT_DIR$/db/db_connection.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/query_builder.py" beforeDir="false" afterPath="$PROJECT_DIR$/db/query_builder.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/rfl_repository.py" beforeDir="false" afterPath="$PROJECT_DIR$/db/rfl_repository.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/module/PsqlModule.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/PsqlModule.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module/data_processing.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/data_processing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module/dialog.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/dialog.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module/get_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/get_data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module/grid_option.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/grid_option.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/module/mail_send.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/mail_send.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module/rfl_tree_viewer.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/rfl_tree_viewer.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/module/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/module/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/RFL_matrix.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/RFL_matrix.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pages/SPDM_LIST.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/SPDM_LIST.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/aras_posgre_get_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/aras_posgre_get_data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/df2.xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/df2_filtered.xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/map_grid_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/map_grid_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/rfl_tree_page.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/rfl_tree_page.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/rlist_data_stuck.xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/test.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pages/アクセス権付与依頼.py" beforeDir="false" afterPath="$PROJECT_DIR$/pages/アクセス権付与依頼.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Allocation.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Allocation.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/AllocationSub.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/AllocationSub.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Approval_status_table.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Approval_status_table.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/CAE Model.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/CAE Model.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/CustomerRequirements.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/CustomerRequirements.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Driver.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Driver.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Enviorment.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Enviorment.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Function.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Function.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/FunctionSub.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/FunctionSub.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/L.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/L.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/LSub.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/LSub.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Logic.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Logic.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/LogicSub.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/LogicSub.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Master-RFL.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Master-RFL.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/PasteError.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/PasteError.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/PerformanceWP.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/PerformanceWP.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Project.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Project.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/R.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/R.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/RFL.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/RFL.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/RFLv2 till 音振.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/RFLv2 till 音振.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/RFLv2 till動力.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/RFLv2 till動力.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/RFLv2 till運転性sys.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/RFLv2 till運転性sys.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/RFLv2 の till 4WD.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/RFLv2 の till 4WD.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/RFLv2.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/RFLv2.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/RSub.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/RSub.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Regulation.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Regulation.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Requirements.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Requirements.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/RequirementsSub.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/RequirementsSub.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Scene.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Scene.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Specification.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Specification.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Unit特性.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Unit特性.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/Vehicle.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/Vehicle.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/detail_data.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/detail_data.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/dialog_list.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/dialog_list.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/old/tanto(sjis).csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/old/tanto(sjis).csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/old/tanto.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/old/tanto.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/se_project_record.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/se_project_record.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/user_table.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/user_table.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/アーキテクチャ.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/アーキテクチャ.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/シーンSub.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/シーンSub.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/シーンリスト.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/シーンリスト.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/ステータス.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/ステータス.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/セグメント.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/セグメント.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/フェーズ.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/フェーズ.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/メタ.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/メタ.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/メタRFL.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/メタRFL.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/メタRFLv2.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/メタRFLv2.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/ロット.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/ロット.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/仕向け.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/仕向け.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/車種.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/車種.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/CSV/階層.csv" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/CSV/階層.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/keiRFLDBaaa.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/keiRFLDBaaa.xlsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/keifunctionRFLTrialForFuture_forKickoff 1.accdb" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/keifunctionRFLTrialForFuture_forKickoff 1.accdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/memo/DB構成.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/memo/DB構成.xlsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/memo/SEリストDB化課題一覧.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/memo/SEリストDB化課題一覧.xlsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/old/keiRFLDBaaa 1.xlsx" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/old/keiRFLDBaaa 1.xlsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/old/keifunctionRFLTrialForFuture_MasterV1_importer1_verify2.accdb" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/old/keifunctionRFLTrialForFuture_MasterV1_importer1_verify2.accdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/query/crate_table.txt" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/query/crate_table.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/postgreSQL_DB/query/insert_SQL.txt" beforeDir="false" afterPath="$PROJECT_DIR$/postgreSQL_DB/query/insert_SQL.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/queries/rfl_pj_select.py" beforeDir="false" afterPath="$PROJECT_DIR$/queries/rfl_pj_select.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/queries/rfl_select.py" beforeDir="false" afterPath="$PROJECT_DIR$/queries/rfl_select.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/queries/rfl_update.py" beforeDir="false" afterPath="$PROJECT_DIR$/queries/rfl_update.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/query_memo.txt" beforeDir="false" afterPath="$PROJECT_DIR$/query_memo.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/variables.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/variables.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,7 +130,7 @@
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
     &quot;url&quot;: &quot;https://github.com/dinhtrong5120/streamlit_spdm_onpre.git&quot;,
-    &quot;accountId&quot;: &quot;99a6e4ed-3ef2-49e1-917e-d559a9947f93&quot;
+    &quot;accountId&quot;: &quot;19462fe6-37ca-4e99-985f-2668cc1a4f2c&quot;
   }
 }</component>
   <component name="ProjectColorInfo">{
@@ -56,8 +147,8 @@
     "Python.SPDM_LIST.executor": "Run",
     "Python.streamlit.executor": "Debug",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "/Users/TrongKieu/Downloads/untitled folder 2/spdm_app_testserver_rfl_design_0912"
+    "git-widget-placeholder": "spdm__1201",
+    "last_opened_file_path": "/Users/TrongKieu/Downloads/untitled folder 2/spdm_app_testserver_rfl_design_0912/module"
   }
 }]]></component>
   <component name="RecentsManager">
@@ -112,8 +203,28 @@
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/module/PsqlModule.py</url>
-          <line>3288</line>
+          <line>6834</line>
+          <option name="timeStamp" value="11" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/module/PsqlModule.py</url>
+          <line>4419</line>
           <option name="timeStamp" value="19" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/pages/SPDM_LIST.py</url>
+          <line>2619</line>
+          <option name="timeStamp" value="26" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/pages/SPDM_LIST.py</url>
+          <line>2231</line>
+          <option name="timeStamp" value="27" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/db/rfl_repository.py</url>
+          <line>766</line>
+          <option name="timeStamp" value="28" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
