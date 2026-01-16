@@ -142,15 +142,15 @@
     <option name="showLibraryContents" value="true" />
     <option name="showMembers" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.SPDM_LIST.executor": "Run",
-    "Python.streamlit.executor": "Debug",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "spdm__1201",
-    "last_opened_file_path": "/Users/TrongKieu/Downloads/untitled folder 2/spdm_app_testserver_rfl_design_0912/module"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.SPDM_LIST.executor&quot;: &quot;Run&quot;,
+    &quot;Python.streamlit.executor&quot;: &quot;Debug&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;spdm__1201&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/TrongKieu/Downloads/untitled folder 2/spdm_app_testserver_rfl_design_0912/module&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
