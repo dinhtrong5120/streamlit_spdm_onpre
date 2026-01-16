@@ -67,3 +67,6 @@ configs.ini
 test/
 db.sqlite3
 media/download_temp
+
+
+const/constpara.py
